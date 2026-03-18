@@ -1,0 +1,35 @@
+{
+  "name": "CO2Control",
+  "version": "1.4.1",
+  "description": "Production-grade ESP32-S2 firmware for CO2Control with deterministic tick-based architecture.",
+  "keywords": [
+    "esp32",
+    "esp32-s2",
+    "arduino",
+    "platformio",
+    "embedded",
+    "firmware",
+    "co2",
+    "non-blocking"
+  ],
+  "authors": [
+    {
+      "name": "Jan Havelka",
+      "url": "https://github.com/janhavelka",
+      "maintainer": true
+    }
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/janhavelka/CO2Control.git"
+  },
+  "license": "MIT",
+  "homepage": "https://github.com/janhavelka/CO2Control",
+  "frameworks": ["arduino"],
+  "platforms": ["espressif32"],
+  "headers": ["CO2Control/CO2Control.h"],
+  "build": {
+    "includeDir": "include",
+    "srcDir": "src"
+  }
+}
