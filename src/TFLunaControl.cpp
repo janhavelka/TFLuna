@@ -161,7 +161,7 @@ struct TFLunaControl::Impl {
   bool lastSdMounted = false;
   uint32_t lastI2cRecoveryCount = 0;
 
-  // Cached heap / stack metrics ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â refreshed once per second to avoid
+  // Cached heap / stack metrics - refreshed once per second to avoid
   // calling expensive heap_caps_get_largest_free_block / stack watermark
   // APIs on every tick.
   uint32_t lastHeapRefreshMs = 0;
@@ -199,7 +199,7 @@ struct TFLunaControl::Impl {
   uint32_t stateMutexTimeoutMs = 10;
   DeviceStatus statusScratch[DEVICE_COUNT]{};
 
-  // Deferred blocking operations ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â executed in processDeferred(), outside tick timing.
+  // Deferred blocking operations - executed in processDeferred(), outside tick timing.
   bool nvsSavePending = false;
   RuntimeSettings nvsSavePayload{};
   bool deferredApStop = false;
@@ -340,7 +340,7 @@ static void applyDefaultSsid(RuntimeSettings& settings) {
     return;
   }
 #ifdef ARDUINO
-  // Read MAC from eFuse directly ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â works before WiFi.begin().
+  // Read MAC from eFuse directly - works before WiFi.begin().
   // WiFi.macAddress() returns all-zeros until the radio is started.
   uint8_t mac[6] = {0};
   esp_read_mac(mac, ESP_MAC_WIFI_STA);
@@ -1059,7 +1059,7 @@ void TFLunaControl::tick(uint32_t nowMs) {
     const uint8_t stations = _impl->web.stationCount();
     const size_t webClients = _impl->web.webClientCount();
     const bool recentUiActivity = _impl->web.hasRecentUiActivity(nowMs, 3000U);
-    // 3 s grace period after last station seen ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â the ESP32 AP inactive
+    // 3 s grace period after last station seen - the ESP32 AP inactive
     // timeout (120 s) already provides the main hysteresis.
     const bool stationConnected =
         (stations > 0U) ||
@@ -1233,9 +1233,9 @@ void TFLunaControl::tick(uint32_t nowMs) {
   bool haveStatusSnapshot = false;
   if (_impl->lockState()) {
     for (size_t i = 0; i < DEVICE_COUNT; ++i) {
-      // Only update devices that were evaluated above (skip SYSTEM ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â set later).
+      // Only update devices that were evaluated above (skip SYSTEM - set later).
       if (static_cast<DeviceId>(i) == DeviceId::SYSTEM) continue;
-      // Skip RTC/ENV/CO2 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â they are updated during sample acquisition.
+      // Skip RTC/ENV/CO2 - they are updated during sample acquisition.
       if (static_cast<DeviceId>(i) == DeviceId::RTC) continue;
       if (static_cast<DeviceId>(i) == DeviceId::ENV) continue;
       if (static_cast<DeviceId>(i) == DeviceId::LIDAR) continue;
@@ -1346,7 +1346,7 @@ void TFLunaControl::tick(uint32_t nowMs) {
   nextStatus.commandQueueOverflowCount = cmdOverflowCount;
   nextStatus.commandQueueLastOverflowMs = cmdLastOverflowMs;
 #ifdef ARDUINO
-  // Heap / stack metrics are refreshed in processDeferred() at 1 Hz
+  // Heap / stack metrics - refreshed at 1 Hz.  ESP.getMaxAllocHeap()
   // to keep the expensive heap_caps_get_largest_free_block and
   // uxTaskGetStackHighWaterMark calls out of cooperative tick timing.
   // I2C task stack is already obtained from i2cMetrics in the I2C task.
@@ -1695,7 +1695,7 @@ void TFLunaControl::processDeferred() {
     return;
   }
 
-  // WiFi stop takes priority ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â cancel any pending start when also stopping.
+  // WiFi stop takes priority - cancel any pending start when also stopping.
   if (_impl->deferredApStop) {
     _impl->deferredApStop = false;
     _impl->deferredApStart = false;
@@ -1728,11 +1728,11 @@ void TFLunaControl::processDeferred() {
     }
   }
 
-  // Deferred SD mount/remount ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â _sd.end() and _sd.begin() block for
+  // Deferred SD mount/remount - _sd.end() and _sd.begin() block for
   // hundreds of milliseconds and must not run inside tick timing.
   _impl->sdLogger.processDeferred(_impl->lastNowMs);
 
-  // Heap / stack metrics ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â refreshed at 1 Hz.  ESP.getMaxAllocHeap()
+  // Heap / stack metrics - refreshed at 1 Hz.  ESP.getMaxAllocHeap()
   // calls heap_caps_get_largest_free_block() which walks the entire free
   // block list (0.5-5+ ms depending on heap fragmentation).
   // uxTaskGetStackHighWaterMark() scans the stack region (0.1-0.5 ms).
@@ -1759,7 +1759,7 @@ void TFLunaControl::processDeferred() {
 #endif
 
   // WS broadcast runs here because AsyncTCP's tcp_write / tcp_output use
-  // tcpip_api_call() ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â a synchronous cross-thread call to the lwIP task.
+  // tcpip_api_call() - a synchronous cross-thread call to the lwIP task.
   // When the lwIP thread is busy (WiFi events, TCP retransmissions,
   // incoming packets), the calling thread blocks for 100-340 ms.
   // Running this outside tick timing keeps the cooperative tick budget clean.

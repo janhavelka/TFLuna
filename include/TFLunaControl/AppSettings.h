@@ -98,7 +98,7 @@ struct AppSettings {
   /// Increased to 10 s for FAT32 cards that initialise slowly via SPI.
   uint16_t sdMountTimeoutMs = 10000;
 
-  /// @brief AsyncSD generic-operation timeout (Info, Stat, Mkdir, â€¦).
+  /// @brief AsyncSD generic-operation timeout (Info, Stat, Mkdir, ...).
   /// Must be long enough that an enqueued Info request is not expired
   /// while waiting behind a file-write job on slow cards.
   uint16_t sdOpTimeoutMs = 10000;

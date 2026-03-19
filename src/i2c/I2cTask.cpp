@@ -2379,7 +2379,7 @@ I2cResult I2cTask::processRequest(const I2cRequest& request, uint32_t nowMs) {
   if (request.deadlineMs != 0 && static_cast<int32_t>(nowMs - request.deadlineMs) > 0) {
     result.status = Status(Err::TIMEOUT, 0, "I2C request expired before execution");
     result.late = true;
-    // Don't call updateMetricsError / recoveryPolicy.onFailure here â€”
+    // Don't call updateMetricsError / recoveryPolicy.onFailure here -
     // the orchestrator independently counts the failure via
     // handleExpiredInFlight / processResult.  Counting here as well
     // double-inflates bus consecutiveErrors and recovery counters.

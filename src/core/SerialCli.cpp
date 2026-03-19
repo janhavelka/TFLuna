@@ -198,11 +198,11 @@ const char* errToStrColored(Err err) {
   }
 }
 
-/// Colorized yes/no: trueâ†’green "yes", falseâ†’red "no"
+/// Colorized yes/no: true -> green "yes", false -> red "no"
 const char* yesNo(bool v) {
   return v ? "\033[32myes\033[0m" : "\033[31mno\033[0m";
 }
-/// Colorized OK/NOT OK: trueâ†’green "yes", falseâ†’red "no"
+/// Colorized OK/NOT OK: true -> green "yes", false -> red "no"
 const char* okNo(bool v) {
   return v ? "\033[32myes\033[0m" : "\033[31mno\033[0m";
 }
@@ -210,7 +210,7 @@ const char* okNo(bool v) {
 const char* validInvalid(bool v) {
   return v ? "\033[32mvalid\033[0m" : "\033[31minvalid\033[0m";
 }
-/// Colorize a counter: 0â†’plain, >0â†’red
+/// Colorize a counter: 0 -> plain, >0 -> red
 void printCounterVal(const char* label, uint32_t value, const char* unit = "") {
   const char* color = (value > 0U) ? CLI_ANSI_ERR : CLI_ANSI_INFO;
   if (unit[0] == '\0') {

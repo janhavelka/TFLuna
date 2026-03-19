@@ -135,6 +135,7 @@ def gate_async_web_mutators() -> list[Failure]:
         "enqueueProbeLidarSensor",
         "enqueueScanI2cBus",
         "enqueueI2cProbeAddress",
+        "enqueueResetLidarStats",
     }
     app_call = re.compile(r"_app->([A-Za-z_][A-Za-z0-9_]*)\s*\(")
     nonblocking_take = re.compile(r"xSemaphoreTake\s*\([^,]+,\s*0[UuLl]*\s*\)")

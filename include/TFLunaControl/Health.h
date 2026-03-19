@@ -38,7 +38,7 @@ struct DeviceStatus {
   uint32_t lastErrorMs = 0;        ///< Timestamp of last error (ms)
   uint32_t lastActivityMs = 0;     ///< Timestamp of last activity (ms)
   uint32_t errorCount = 0;         ///< Total error count
-  bool optional = false;           ///< Optional device â€” excluded from system health aggregation
+  bool optional = false;           ///< Optional device - excluded from system health aggregation
 };
 
 /**

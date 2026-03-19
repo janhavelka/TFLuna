@@ -1963,7 +1963,7 @@ void WebServer::broadcastDeferred(uint32_t nowMs) {
     return;
   }
 
-  // WiFi stat cache refresh â€” calls esp_wifi_ap_get_sta_list(),
+  // WiFi stat cache refresh - calls esp_wifi_ap_get_sta_list(),
   // esp_wifi_get_config(), WiFi.softAPgetStationNum() which all use
   // cross-task IPC and can block 50-200 ms when the lwIP task is busy.
   // Runs outside tick timing at 1 Hz.
@@ -1972,7 +1972,7 @@ void WebServer::broadcastDeferred(uint32_t nowMs) {
 #if TFLUNACTRL_HAS_MDNS
   // MDNS.begin() performs multicast socket setup via tcpip_api_call()
   // and can stall for hundreds of milliseconds to seconds.  Retries
-  // every 2 s until successful â€” must not run inside cooperative tick.
+  // every 2 s until successful - must not run inside cooperative tick.
   if (!_mdnsRunning &&
       (_mdnsNextRetryMs == 0 || static_cast<int32_t>(nowMs - _mdnsNextRetryMs) >= 0)) {
     if (MDNS.begin(kApHostname)) {
@@ -1985,7 +1985,7 @@ void WebServer::broadcastDeferred(uint32_t nowMs) {
   }
 #endif
 
-  // WS client cleanup â€” may trigger TCP FIN via tcpip_api_call()
+  // WS client cleanup - may trigger TCP FIN via tcpip_api_call()
   // for dead clients, so it runs here outside tick timing.
   if (_impl->ws.count() > 0U &&
       (_lastWsCleanupMs == 0U ||

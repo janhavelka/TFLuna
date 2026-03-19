@@ -2394,7 +2394,7 @@ void SdLogger::tick(uint32_t nowMs) {
       // potentially long FAT32 free-cluster scan does not block writes.
       if (!_job.active) {
         // Exponential backoff after consecutive info timeouts:
-        // base * 2^min(streak,3)  â†’  30 s / 60 s / 120 s / 240 s max
+        // base * 2^min(streak,3) -> 30 s / 60 s / 120 s / 240 s max
         const uint32_t backoffMult = 1U << (_infoTimeoutStreak > 3U ? 3U : _infoTimeoutStreak);
         const uint32_t refreshMs = _sdInfoValid
             ? SD_INFO_REFRESH_MS
@@ -2617,7 +2617,7 @@ void SdLogger::tick(uint32_t nowMs) {
 
 void SdLogger::processDeferred(uint32_t nowMs) {
 #if TFLUNACTRL_HAS_ASYNC_SD
-  // Phase 1: teardown â€” markUnmounted() defers _sd.end() to avoid blocking
+  // Phase 1: teardown - markUnmounted() defers _sd.end() to avoid blocking
   // tick.  Execute it here and yield so the FreeRTOS worker task has a full
   // loop cycle to release SPI resources before _sd.begin() re-inits the bus.
   if (_deferredTeardown) {
@@ -2628,7 +2628,7 @@ void SdLogger::processDeferred(uint32_t nowMs) {
     return;
   }
 
-  // Remount supersedes a pending mount â€” force teardown, then mount fresh.
+  // Remount supersedes a pending mount - force teardown, then mount fresh.
   if (_deferredRemount) {
     _deferredRemount = false;
     _deferredMount = true;

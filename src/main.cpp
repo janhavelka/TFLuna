@@ -160,7 +160,7 @@ void setup() {
   // IDF 5.x task WDT safety net.  pioarduino initialises the TWDT at boot
   // (CONFIG_ESP_TASK_WDT_INIT=y, CONFIG_ESP_TASK_WDT_PANIC=y) with zero
   // subscribers.  AsyncSD's enableCore0WDT() subscribes the IDLE task during
-  // periodic SD-info free-cluster scans â€” but IDLE has no hook to feed the
+  // periodic SD-info free-cluster scans - but IDLE has no hook to feed the
   // WDT, which would trigger a panic after the 5 s default timeout.
   // Reconfigure to non-panic mode with a generous timeout so accidental
   // IDLE subscriptions never crash the board.
