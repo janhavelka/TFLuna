@@ -292,7 +292,7 @@ struct RuntimeSettings {
   bool logDailyEnabled = false;
 
   /// @brief Enable all-time CSV logging.
-  bool logAllEnabled = true;
+  bool logAllEnabled = false;
 
   /// @brief Maximum size for logs/all.csv in bytes.
   uint32_t logAllMaxBytes = 3500000000UL;

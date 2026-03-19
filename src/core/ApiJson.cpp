@@ -411,6 +411,18 @@ void populateStatusJson(JsonDocument& doc, const SystemStatus& sys, const Sample
   doc["cmd_queue_capacity"] = static_cast<uint32_t>(sys.commandQueueCapacity);
   doc["cmd_queue_overflow_count"] = sys.commandQueueOverflowCount;
   doc["cmd_queue_last_overflow_ms"] = sys.commandQueueLastOverflowMs;
+  doc["endstop_upper_pin"] = sys.endstopUpperPin;
+  doc["endstop_upper_configured"] = sys.endstopUpperConfigured;
+  doc["endstop_upper_active_low"] = sys.endstopUpperActiveLow;
+  doc["endstop_upper_raw_high"] = sys.endstopUpperRawHigh;
+  doc["endstop_upper_triggered"] = sys.endstopUpperTriggered;
+  doc["endstop_upper_last_change_ms"] = sys.endstopUpperLastChangeMs;
+  doc["endstop_lower_pin"] = sys.endstopLowerPin;
+  doc["endstop_lower_configured"] = sys.endstopLowerConfigured;
+  doc["endstop_lower_active_low"] = sys.endstopLowerActiveLow;
+  doc["endstop_lower_raw_high"] = sys.endstopLowerRawHigh;
+  doc["endstop_lower_triggered"] = sys.endstopLowerTriggered;
+  doc["endstop_lower_last_change_ms"] = sys.endstopLowerLastChangeMs;
   doc["output_present_mask"] = sys.outputPresentMask;
   doc["output_channel_mask"] = sys.outputChannelMask;
   doc["output_override_mode"] = sys.outputOverrideMode;
@@ -555,6 +567,18 @@ void populateLiveStatusJson(JsonDocument& doc, const SystemStatus& sys, const Sa
   doc["i2c_rtc_consecutive_failures"] = sys.i2cRtcConsecutiveFailures;
   doc["i2c_env_consecutive_failures"] = sys.i2cEnvConsecutiveFailures;
 
+  doc["endstop_upper_pin"] = sys.endstopUpperPin;
+  doc["endstop_upper_configured"] = sys.endstopUpperConfigured;
+  doc["endstop_upper_active_low"] = sys.endstopUpperActiveLow;
+  doc["endstop_upper_raw_high"] = sys.endstopUpperRawHigh;
+  doc["endstop_upper_triggered"] = sys.endstopUpperTriggered;
+  doc["endstop_upper_last_change_ms"] = sys.endstopUpperLastChangeMs;
+  doc["endstop_lower_pin"] = sys.endstopLowerPin;
+  doc["endstop_lower_configured"] = sys.endstopLowerConfigured;
+  doc["endstop_lower_active_low"] = sys.endstopLowerActiveLow;
+  doc["endstop_lower_raw_high"] = sys.endstopLowerRawHigh;
+  doc["endstop_lower_triggered"] = sys.endstopLowerTriggered;
+  doc["endstop_lower_last_change_ms"] = sys.endstopLowerLastChangeMs;
   doc["output_present_mask"] = sys.outputPresentMask;
   doc["output_channel_mask"] = sys.outputChannelMask;
   doc["output_override_mode"] = sys.outputOverrideMode;

@@ -20,6 +20,7 @@ namespace TFLunaControl { static constexpr const char* VERSION = "dev"; }
 #include "core/Scheduler.h"
 #include "core/SystemClock.h"
 #include "devices/ButtonManager.h"
+#include "devices/EndstopAdapter.h"
 #include "devices/LidarAdapter.h"
 #include "devices/EnvSensorAdapter.h"
 #include "devices/RtcAdapter.h"
@@ -121,6 +122,7 @@ struct TFLunaControl::Impl {
   I2cTask i2cTask;
   I2cOrchestrator i2cOrchestrator;
   OutputController outputs;
+  EndstopAdapter endstops;
   SdLogger sdLogger;
   SettingsStore settingsStore;
   ButtonManager button;
@@ -661,6 +663,7 @@ Status TFLunaControl::begin(const HardwareSettings& config, const AppSettings& a
                      outputsBeginSt.ok() ? HealthState::OK : HealthState::FAULT,
                      outputsBeginSt,
                      0);
+  (void)_impl->endstops.begin(_config);
 
   Status i2cTaskSt = _impl->i2cTask.begin(_config, _settings);
   Status i2cOrchSt = _impl->i2cOrchestrator.begin(_config, _appSettings, _settings, &_impl->i2cTask);
@@ -737,6 +740,7 @@ void TFLunaControl::end() {
   _impl->web.end();
   _impl->leds.end();
   _impl->outputs.end();
+  _impl->endstops.end();
   _impl->i2cOrchestrator.end();
   _impl->i2cTask.end();
   _impl->sdLogger.end();
@@ -788,6 +792,7 @@ void TFLunaControl::tick(uint32_t nowMs) {
   const uint32_t uptimeMs = nowMs - _impl->bootMs;
 
   _impl->button.tick(nowMs);
+  _impl->endstops.tick(nowMs);
 
   RuntimeSettings currentSettings = getSettings();
   if (_impl->button.consumeMultiPress()) {
@@ -1452,6 +1457,20 @@ void TFLunaControl::tick(uint32_t nowMs) {
   nextStatus.mainTaskStackFreeBytes = _impl->cachedMainStackFreeBytes;
 #endif
   nextStatus.i2cTaskStackFreeBytes = _impl->cachedI2cStackFreeBytes;
+
+  const EndstopAdapter::Snapshot& endstops = _impl->endstops.snapshot();
+  nextStatus.endstopUpperPin = static_cast<int16_t>(endstops.upperPin);
+  nextStatus.endstopUpperConfigured = endstops.upperConfigured;
+  nextStatus.endstopUpperActiveLow = endstops.upperActiveLow;
+  nextStatus.endstopUpperRawHigh = endstops.upperRawHigh;
+  nextStatus.endstopUpperTriggered = endstops.upperTriggered;
+  nextStatus.endstopUpperLastChangeMs = endstops.upperLastChangeMs;
+  nextStatus.endstopLowerPin = static_cast<int16_t>(endstops.lowerPin);
+  nextStatus.endstopLowerConfigured = endstops.lowerConfigured;
+  nextStatus.endstopLowerActiveLow = endstops.lowerActiveLow;
+  nextStatus.endstopLowerRawHigh = endstops.lowerRawHigh;
+  nextStatus.endstopLowerTriggered = endstops.lowerTriggered;
+  nextStatus.endstopLowerLastChangeMs = endstops.lowerLastChangeMs;
 
   // Output state
   nextStatus.outputPresentMask = outputPresentMask;

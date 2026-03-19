@@ -11,6 +11,7 @@
 
 #include "control/OutputController.h"
 #include "control/OutputLogic.h"
+#include "config/AppConfig.h"
 #include "core/CommandQueue.h"
 #include "core/QueueHealth.h"
 #include "core/RingBuffer.h"
@@ -379,6 +380,18 @@ void test_default_rtc_address_is_rv3032() {
   TEST_ASSERT_TRUE(s.i2cRtcEnableEepromWrites);
 }
 
+void test_board_defaults_prepare_endstop_inputs_and_disable_outputs() {
+  const HardwareSettings hw = loadHardwareSettings();
+  TEST_ASSERT_EQUAL_INT(5, hw.endstopUpperPin);
+  TEST_ASSERT_EQUAL_INT(6, hw.endstopLowerPin);
+  TEST_ASSERT_TRUE(hw.endstopUpperActiveLow);
+  TEST_ASSERT_TRUE(hw.endstopLowerActiveLow);
+  TEST_ASSERT_EQUAL_INT(-1, hw.mosfet1Pin);
+  TEST_ASSERT_EQUAL_INT(-1, hw.mosfet2Pin);
+  TEST_ASSERT_EQUAL_INT(-1, hw.relay1Pin);
+  TEST_ASSERT_EQUAL_INT(-1, hw.relay2Pin);
+}
+
 void test_settings_validation_extremes() {
   RuntimeSettings s;
 
@@ -581,6 +594,18 @@ void test_status_json_bounded_serialization() {
   sys.commandQueueDepth = 1;
   sys.commandQueueOverflowCount = 5;
   sys.commandQueueLastOverflowMs = 122222;
+  sys.endstopUpperPin = 5;
+  sys.endstopUpperConfigured = true;
+  sys.endstopUpperActiveLow = true;
+  sys.endstopUpperRawHigh = false;
+  sys.endstopUpperTriggered = true;
+  sys.endstopUpperLastChangeMs = 2222;
+  sys.endstopLowerPin = 6;
+  sys.endstopLowerConfigured = true;
+  sys.endstopLowerActiveLow = true;
+  sys.endstopLowerRawHigh = true;
+  sys.endstopLowerTriggered = false;
+  sys.endstopLowerLastChangeMs = 3333;
   sys.outputPresentMask = 0x05;
   sys.outputChannelMask = 0x01;
 
@@ -610,6 +635,10 @@ void test_status_json_bounded_serialization() {
   TEST_ASSERT_EQUAL_UINT32(0x01, doc["output_channel_mask"].as<uint32_t>());
   TEST_ASSERT_EQUAL_STRING("queue full", doc["log_last_error_msg"].as<const char*>());
   TEST_ASSERT_EQUAL_UINT32(2, doc["log_budget_exceeded_count"].as<uint32_t>());
+  TEST_ASSERT_EQUAL_INT(5, doc["endstop_upper_pin"].as<int>());
+  TEST_ASSERT_TRUE(doc["endstop_upper_triggered"].as<bool>());
+  TEST_ASSERT_EQUAL_INT(6, doc["endstop_lower_pin"].as<int>());
+  TEST_ASSERT_FALSE(doc["endstop_lower_triggered"].as<bool>());
 }
 
 void test_command_queue_degraded_window_logic() {
@@ -806,6 +835,8 @@ void test_faster_distance_refresh_defaults() {
 
   RuntimeSettings settings;
   settings.restoreDefaults();
+  TEST_ASSERT_FALSE(settings.logDailyEnabled);
+  TEST_ASSERT_FALSE(settings.logAllEnabled);
   TEST_ASSERT_EQUAL_UINT32(250U, settings.i2cDisplayPollMs);
 }
 
@@ -831,6 +862,25 @@ void test_web_i2c_settings_are_cli_only() {
   TEST_ASSERT_NULL(strstr(text, "env-model"));
   TEST_ASSERT_NULL(strstr(text, "queueRtcBackupSetup"));
   TEST_ASSERT_NULL(strstr(text, "rtc-setup-backup"));
+}
+
+void test_web_endstops_tab_replaces_outputs_surface() {
+  std::string pageSource;
+  TEST_ASSERT_TRUE(loadTextFile("src/web/WebPages.h", pageSource));
+  const char* text = pageSource.c_str();
+
+  TEST_ASSERT_NOT_NULL(strstr(text, "b-endstops"));
+  TEST_ASSERT_NOT_NULL(strstr(text, "id=\"endstops\""));
+  TEST_ASSERT_NOT_NULL(strstr(text, "GPIO 5 is prepared for the upper limit, GPIO 6 for the lower limit."));
+  TEST_ASSERT_NOT_NULL(strstr(text, "renderEndstopsQuick"));
+  TEST_ASSERT_NOT_NULL(strstr(text, "renderEndstopsTab"));
+  TEST_ASSERT_NULL(strstr(text, "id=\"b-outputs\""));
+  TEST_ASSERT_NULL(strstr(text, "<div id=\"outputs\" class=\"tab\">"));
+  TEST_ASSERT_NULL(strstr(text, "renderOutputsTab"));
+  TEST_ASSERT_NULL(strstr(text, "queueOutputBlink"));
+  TEST_ASSERT_NULL(strstr(text, "postOutputTestWithRetry"));
+  TEST_ASSERT_NULL(strstr(text, "OUTPUT_TEST_RUNNING"));
+  TEST_ASSERT_NULL(strstr(text, "out-fan-range"));
 }
 
 void test_no_unbounded_state_mutex_waits() {
@@ -1820,6 +1870,7 @@ int main(int argc, char** argv) {
   RUN_TEST(test_output_controller_valve_never_pwm_on_mosfet);
   RUN_TEST(test_settings_validation);
   RUN_TEST(test_default_rtc_address_is_rv3032);
+  RUN_TEST(test_board_defaults_prepare_endstop_inputs_and_disable_outputs);
   RUN_TEST(test_settings_validation_extremes);
   RUN_TEST(test_sample_interval_upper_bound_matches_timer_window);
   RUN_TEST(test_app_settings_validation_guards_present);
@@ -1839,6 +1890,7 @@ int main(int argc, char** argv) {
   RUN_TEST(test_faster_distance_refresh_defaults);
   RUN_TEST(test_web_live_device_tab_rerenders_distance_stats);
   RUN_TEST(test_web_i2c_settings_are_cli_only);
+  RUN_TEST(test_web_endstops_tab_replaces_outputs_surface);
   RUN_TEST(test_no_unbounded_state_mutex_waits);
   RUN_TEST(test_nothrow_allocation_paths_for_runtime_objects);
   RUN_TEST(test_i2c_token_wrap_guards_present);

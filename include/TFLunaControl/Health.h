@@ -185,6 +185,20 @@ struct SystemStatus {
   uint32_t commandQueueOverflowCount = 0;     ///< Command queue overflow count
   uint32_t commandQueueLastOverflowMs = 0;    ///< Last command queue overflow time
 
+  // --- Endstop state ---
+  int16_t endstopUpperPin = -1;               ///< Configured upper limit GPIO (-1=disabled)
+  bool endstopUpperConfigured = false;        ///< True when upper limit input is configured
+  bool endstopUpperActiveLow = true;          ///< Upper limit polarity (true=active-low)
+  bool endstopUpperRawHigh = false;           ///< Last sampled upper limit raw GPIO level
+  bool endstopUpperTriggered = false;         ///< Upper limit interpreted trigger state
+  uint32_t endstopUpperLastChangeMs = 0;      ///< Timestamp of last upper limit state change
+  int16_t endstopLowerPin = -1;               ///< Configured lower limit GPIO (-1=disabled)
+  bool endstopLowerConfigured = false;        ///< True when lower limit input is configured
+  bool endstopLowerActiveLow = true;          ///< Lower limit polarity (true=active-low)
+  bool endstopLowerRawHigh = false;           ///< Last sampled lower limit raw GPIO level
+  bool endstopLowerTriggered = false;         ///< Lower limit interpreted trigger state
+  uint32_t endstopLowerLastChangeMs = 0;      ///< Timestamp of last lower limit state change
+
   // --- Output state ---
   uint8_t outputPresentMask = 0;              ///< Bitmask of physically configured output channels
   uint8_t outputChannelMask = 0;              ///< Bitmask of active output channels

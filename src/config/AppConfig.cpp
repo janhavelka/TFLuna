@@ -24,10 +24,8 @@ HardwareSettings loadHardwareSettings() {
   settings.lidarUartIndex = 1;
   settings.displayFlipX = true;
   settings.displayFlipY = true;
-
-  settings.mosfet1Pin = 35;
-  // mosfet1ActiveHigh defaults to true: output LOW (off) at boot,
-  // driven HIGH when the hysteresis threshold is reached.
+  settings.endstopUpperPin = 5;
+  settings.endstopLowerPin = 6;
 
 #if defined(CONFIG_IDF_TARGET_ESP32S3) || defined(ARDUINO_ESP32S3_DEV)
   // ESP32-S3-only nets present on this board revision.

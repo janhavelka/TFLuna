@@ -249,6 +249,18 @@ struct HardwareSettings {
   /// @brief LED transition smoothing step in milliseconds.
   uint16_t ledSmoothStepMs = 20;
 
+  /// @brief Upper limit endstop GPIO. Set to -1 to disable.
+  int endstopUpperPin = -1;
+
+  /// @brief True when upper limit endstop is active-low.
+  bool endstopUpperActiveLow = true;
+
+  /// @brief Lower limit endstop GPIO. Set to -1 to disable.
+  int endstopLowerPin = -1;
+
+  /// @brief True when lower limit endstop is active-low.
+  bool endstopLowerActiveLow = true;
+
   /// @brief MOSFET output 1 pin. Set to -1 to disable.
   int mosfet1Pin = -1;
 
