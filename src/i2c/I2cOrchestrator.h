@@ -22,9 +22,6 @@ class I2cOrchestrator {
   Status queueBusScan(uint32_t nowMs);
   Status queueRawRequest(const I2cRequest& request, uint32_t nowMs);
   void setDisplayCo2Snapshot(float ppm, bool valid, uint32_t sampleMs);
-  void setDisplayOutputSnapshot(uint8_t channelMask,
-                                OutputOverrideMode mode,
-                                bool outputsEnabled);
   void setDisplaySystemSnapshot(bool loggingEnabled,
                                 bool sdMounted,
                                 bool loggingHealthy,
@@ -118,9 +115,6 @@ class I2cOrchestrator {
   bool _displayCo2Valid = false;
   float _displayCo2Ppm = 0.0f;
   uint32_t _displayCo2SampleMs = 0;
-  uint8_t _displayOutputMask = 0;
-  OutputOverrideMode _displayOutputMode = OutputOverrideMode::AUTO;
-  bool _displayOutputsEnabled = false;
   bool _displayLoggingEnabled = false;
   bool _displaySdMounted = false;
   bool _displayLoggingHealthy = false;

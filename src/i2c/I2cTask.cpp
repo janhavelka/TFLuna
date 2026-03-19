@@ -348,9 +348,6 @@ Status I2cTask::begin(const HardwareSettings& config, const RuntimeSettings& set
   _displayCo2Valid = false;
   _displayCo2Ppm = 0.0f;
   _displayCo2SampleMs = 0;
-  _displayOutputMask = 0;
-  _displayOutputMode = OutputOverrideMode::AUTO;
-  _displayOutputsEnabled = false;
   _displayLogEnabled = false;
   _displayLogMounted = false;
   _displayLogHealthy = false;
@@ -512,9 +509,6 @@ void I2cTask::end() {
   _displayCo2Valid = false;
   _displayCo2Ppm = 0.0f;
   _displayCo2SampleMs = 0;
-  _displayOutputMask = 0;
-  _displayOutputMode = OutputOverrideMode::AUTO;
-  _displayOutputsEnabled = false;
   _displayLogEnabled = false;
   _displayLogMounted = false;
   _displayLogHealthy = false;
@@ -2292,30 +2286,18 @@ Status I2cTask::handleDisplayRefresh(const I2cRequest& request, I2cResult& resul
     _displayCo2Ppm = 0.0f;
     _displayLogSamplesWritten = 0;
   }
-  if (request.txLen >= 12U) {
-    _displayOutputMask = static_cast<uint8_t>(request.tx[9] & 0x0FU);
-    _displayOutputsEnabled = (request.tx[11] != 0U);
-    const uint8_t mode = request.tx[10];
-    if (mode == static_cast<uint8_t>(OutputOverrideMode::FORCE_ON)) {
-      _displayOutputMode = OutputOverrideMode::FORCE_ON;
-    } else if (mode == static_cast<uint8_t>(OutputOverrideMode::FORCE_OFF)) {
-      _displayOutputMode = OutputOverrideMode::FORCE_OFF;
-    } else {
-      _displayOutputMode = OutputOverrideMode::AUTO;
-    }
-  }
-  if (request.txLen >= 14U) {
-    const uint8_t flags = request.tx[12];
+  if (request.txLen >= 11U) {
+    const uint8_t flags = request.tx[9];
     _displayLogEnabled = (flags & 0x01U) != 0U;
     _displayLogMounted = (flags & 0x02U) != 0U;
     _displayLogHealthy = (flags & 0x04U) != 0U;
 
-    switch (static_cast<HealthState>(request.tx[13])) {
+    switch (static_cast<HealthState>(request.tx[10])) {
       case HealthState::OK:
       case HealthState::DEGRADED:
       case HealthState::FAULT:
       case HealthState::UNKNOWN:
-        _displaySystemHealth = static_cast<HealthState>(request.tx[13]);
+        _displaySystemHealth = static_cast<HealthState>(request.tx[10]);
         break;
       default:
         _displaySystemHealth = HealthState::UNKNOWN;

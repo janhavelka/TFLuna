@@ -1,6 +1,5 @@
 #include "TFLunaControl/RuntimeSettings.h"
 
-#include <math.h>
 #include <stddef.h>
 #include <string.h>
 
@@ -89,75 +88,6 @@ Status RuntimeSettings::validate() const {
   if (apAutoOffMs < MIN_AP_AUTO_OFF_MS || apAutoOffMs > MAX_AP_AUTO_OFF_MS) {
     return Status(Err::INVALID_CONFIG, 0, "apAutoOffMs out of range");
   }
-  if (!isfinite(co2OnPpm) || !isfinite(co2OffPpm)) {
-    return Status(Err::INVALID_CONFIG, 0, "co2 thresholds must be finite");
-  }
-  if (co2OnPpm < MIN_CO2_PPM || co2OnPpm > MAX_CO2_PPM ||
-      co2OffPpm < MIN_CO2_PPM || co2OffPpm > MAX_CO2_PPM) {
-    return Status(Err::INVALID_CONFIG, 0, "co2 thresholds out of range");
-  }
-  if (co2OnPpm <= co2OffPpm) {
-    return Status(Err::INVALID_CONFIG, 0, "co2OnPpm must be > co2OffPpm");
-  }
-  if (!isfinite(tempOnC) || !isfinite(tempOffC)) {
-    return Status(Err::INVALID_CONFIG, 0, "temp thresholds must be finite");
-  }
-  if (tempOnC < MIN_TEMP_C || tempOnC > MAX_TEMP_C ||
-      tempOffC < MIN_TEMP_C || tempOffC > MAX_TEMP_C) {
-    return Status(Err::INVALID_CONFIG, 0, "temp thresholds out of range");
-  }
-  if (tempOnC <= tempOffC) {
-    return Status(Err::INVALID_CONFIG, 0, "tempOnC must be > tempOffC");
-  }
-  if (!isfinite(rhOnPct) || !isfinite(rhOffPct)) {
-    return Status(Err::INVALID_CONFIG, 0, "rh thresholds must be finite");
-  }
-  if (rhOnPct < MIN_RH_PCT || rhOnPct > MAX_RH_PCT ||
-      rhOffPct < MIN_RH_PCT || rhOffPct > MAX_RH_PCT) {
-    return Status(Err::INVALID_CONFIG, 0, "rh thresholds out of range");
-  }
-  if (rhOnPct <= rhOffPct) {
-    return Status(Err::INVALID_CONFIG, 0, "rhOnPct must be > rhOffPct");
-  }
-  if (outputSource > static_cast<uint8_t>(2U)) {
-    return Status(Err::INVALID_CONFIG, 0, "outputSource must be 0..2");
-  }
-  const auto validOutputChannel = [](uint8_t channel) -> bool {
-    if (channel == OUTPUT_CHANNEL_DISABLED) {
-      return true;
-    }
-    return channel <= MAX_OUTPUT_CHANNEL_INDEX;
-  };
-  if (!validOutputChannel(outputValveChannel)) {
-    return Status(Err::INVALID_CONFIG, 0, "outputValveChannel out of range");
-  }
-  if (!validOutputChannel(outputFanChannel)) {
-    return Status(Err::INVALID_CONFIG, 0, "outputFanChannel out of range");
-  }
-  if (outputValveChannel != OUTPUT_CHANNEL_DISABLED &&
-      outputFanChannel != OUTPUT_CHANNEL_DISABLED &&
-      outputValveChannel == outputFanChannel) {
-    return Status(Err::INVALID_CONFIG, 0, "output valve/fan channels must differ");
-  }
-  if (outputFanPwmPercent > MAX_OUTPUT_FAN_PWM_PERCENT) {
-    return Status(Err::INVALID_CONFIG, 0, "outputFanPwmPercent out of range");
-  }
-  if (outputFanPeriodMs != OUTPUT_FAN_PERIOD_DISABLED_MS &&
-      (outputFanPeriodMs < MIN_OUTPUT_FAN_PERIOD_MS ||
-       outputFanPeriodMs > MAX_OUTPUT_FAN_PERIOD_MS)) {
-    return Status(Err::INVALID_CONFIG, 0, "outputFanPeriodMs out of range");
-  }
-  if (outputFanOnMs < MIN_OUTPUT_FAN_ON_MS || outputFanOnMs > MAX_OUTPUT_FAN_ON_MS) {
-    return Status(Err::INVALID_CONFIG, 0, "outputFanOnMs out of range");
-  }
-  if (outputFanPeriodMs != OUTPUT_FAN_PERIOD_DISABLED_MS &&
-      outputFanOnMs > outputFanPeriodMs) {
-    return Status(Err::INVALID_CONFIG, 0, "outputFanOnMs > outputFanPeriodMs");
-  }
-  if (minOnMs < MIN_DWELL_MS || minOnMs > MAX_DWELL_MS ||
-      minOffMs < MIN_DWELL_MS || minOffMs > MAX_DWELL_MS) {
-    return Status(Err::INVALID_CONFIG, 0, "minOnMs/minOffMs out of range");
-  }
   if (commandDrainPerTick < MIN_COMMANDS_PER_TICK || commandDrainPerTick > MAX_COMMANDS_PER_TICK) {
     return Status(Err::INVALID_CONFIG, 0, "commandDrainPerTick out of range");
   }
@@ -168,10 +98,6 @@ Status RuntimeSettings::validate() const {
   if (commandQueueDegradedDepthThreshold < MIN_COMMAND_QUEUE_DEGRADED_DEPTH ||
       commandQueueDegradedDepthThreshold > MAX_COMMAND_QUEUE_DEGRADED_DEPTH) {
     return Status(Err::INVALID_CONFIG, 0, "commandQueueDegradedDepthThreshold out of range");
-  }
-  if (outputDataStaleMinMs < MIN_OUTPUT_DATA_STALE_MIN_MS ||
-      outputDataStaleMinMs > MAX_OUTPUT_DATA_STALE_MIN_MS) {
-    return Status(Err::INVALID_CONFIG, 0, "outputDataStaleMinMs out of range");
   }
   if (mainTickSlowThresholdUs < MIN_MAIN_TICK_SLOW_THRESHOLD_US ||
       mainTickSlowThresholdUs > MAX_MAIN_TICK_SLOW_THRESHOLD_US) {

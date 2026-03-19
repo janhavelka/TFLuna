@@ -9,8 +9,8 @@
 
 namespace TFLunaControl {
 
-static constexpr uint32_t SETTINGS_MAGIC = 0x434F3243;  // "CO2C"
-static constexpr uint16_t SETTINGS_VERSION = 15;
+static constexpr uint32_t SETTINGS_MAGIC = 0x54464C43;  // "TFLC"
+static constexpr uint16_t SETTINGS_VERSION = 16;
 
 struct SettingsBlob {
   uint32_t magic = SETTINGS_MAGIC;

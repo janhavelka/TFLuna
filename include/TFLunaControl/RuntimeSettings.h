@@ -53,12 +53,6 @@ struct RuntimeSettings {
   static constexpr uint32_t MIN_AP_AUTO_OFF_MS = 1000;
   static constexpr uint32_t MAX_AP_AUTO_OFF_MS = 86400000UL;
 
-  static constexpr float MIN_CO2_PPM = 0.0f;
-  static constexpr float MAX_CO2_PPM = 10000.0f;
-
-  static constexpr uint32_t MIN_DWELL_MS = 1;
-  static constexpr uint32_t MAX_DWELL_MS = 86400000UL;
-
   static constexpr uint8_t MIN_COMMANDS_PER_TICK = 1;
   static constexpr uint8_t MAX_COMMANDS_PER_TICK = 8;
 
@@ -67,20 +61,6 @@ struct RuntimeSettings {
 
   static constexpr uint8_t MIN_COMMAND_QUEUE_DEGRADED_DEPTH = 1;
   static constexpr uint8_t MAX_COMMAND_QUEUE_DEGRADED_DEPTH = 8;
-
-  static constexpr uint32_t MIN_OUTPUT_DATA_STALE_MIN_MS = 1000;
-  static constexpr uint32_t MAX_OUTPUT_DATA_STALE_MIN_MS = 86400000UL;
-  static constexpr uint8_t OUTPUT_CHANNEL_DISABLED = 0xFFU;
-  static constexpr uint8_t MIN_OUTPUT_CHANNEL_INDEX = 0U;
-  static constexpr uint8_t MAX_OUTPUT_CHANNEL_INDEX = 3U;
-  static constexpr uint8_t MIN_OUTPUT_FAN_PWM_PERCENT = 0U;
-  static constexpr uint8_t MAX_OUTPUT_FAN_PWM_PERCENT = 100U;
-  static constexpr uint8_t OUTPUT_FAN_PWM_EFFECTIVE_MIN_PERCENT = 30U;
-  static constexpr uint32_t OUTPUT_FAN_PERIOD_DISABLED_MS = 0U;
-  static constexpr uint32_t MIN_OUTPUT_FAN_PERIOD_MS = 100U;
-  static constexpr uint32_t MAX_OUTPUT_FAN_PERIOD_MS = 86400000UL;
-  static constexpr uint32_t MIN_OUTPUT_FAN_ON_MS = 0U;
-  static constexpr uint32_t MAX_OUTPUT_FAN_ON_MS = 86400000UL;
 
   static constexpr uint32_t MIN_MAIN_TICK_SLOW_THRESHOLD_US = 100;
   static constexpr uint32_t MAX_MAIN_TICK_SLOW_THRESHOLD_US = 500000;
@@ -280,11 +260,6 @@ struct RuntimeSettings {
   static constexpr uint8_t MIN_CLI_VERBOSITY = 0;
   static constexpr uint8_t MAX_CLI_VERBOSITY = 2;
 
-  static constexpr float MIN_TEMP_C = -40.0f;
-  static constexpr float MAX_TEMP_C = 125.0f;
-  static constexpr float MIN_RH_PCT = 0.0f;
-  static constexpr float MAX_RH_PCT = 100.0f;
-
   /// @brief Sample interval in milliseconds.
   uint32_t sampleIntervalMs = 100;
 
@@ -333,7 +308,7 @@ struct RuntimeSettings {
   /// @brief Serial diagnostic summary interval in milliseconds.
   uint32_t serialPrintIntervalMs = 5000;
 
-  /// @brief CLI detail level (0=compact, 1=normal, 2=verbose).
+  /// @brief CLI detail level (0=off/minimal, 1=normal, 2=verbose).
   uint8_t cliVerbosity = 1;
 
   /// @brief I2C bus frequency in Hz.
@@ -372,8 +347,8 @@ struct RuntimeSettings {
   /// @brief Poll interval for RTC read in milliseconds.
   uint32_t i2cRtcPollMs = 1000;
 
-  /// @brief Poll interval for future I2C display refresh in milliseconds.
-  uint32_t i2cDisplayPollMs = 250;
+  /// @brief Poll interval for I2C display refresh in milliseconds.
+  uint32_t i2cDisplayPollMs = 100;
 
   /// @brief Wait between ENV one-shot trigger and read phases.
   uint32_t i2cEnvConversionWaitMs = 30;
@@ -537,53 +512,6 @@ struct RuntimeSettings {
   /// @brief Auto-off timeout for SoftAP when idle (ms).
   uint32_t apAutoOffMs = 60000;
 
-  /// @brief Enable output control.
-  bool outputsEnabled = false;
-
-  /// @brief Output control input source (0=CO2, 1=TEMP, 2=RH).
-  uint8_t outputSource = 0;
-
-  /// @brief Channel index used for valve actuation (0..3, 255=disabled).
-  uint8_t outputValveChannel = 1;
-
-  /// @brief Semantics helper: true when powered valve state means "closed".
-  bool outputValvePoweredClosed = true;
-
-  /// @brief Channel index used for fan actuation (0..3, 255=disabled).
-  uint8_t outputFanChannel = 0;
-
-  /// @brief Fan power setting in user percent (0=off, 1..100 mapped to effective PWM).
-  uint8_t outputFanPwmPercent = 0;
-
-  /// @brief Fan interval period in milliseconds (0 = continuous, no interval gating).
-  uint32_t outputFanPeriodMs = OUTPUT_FAN_PERIOD_DISABLED_MS;
-
-  /// @brief Fan ON window inside interval period in milliseconds.
-  /// Clamped to `outputFanPeriodMs` when interval gating is enabled.
-  uint32_t outputFanOnMs = 0;
-
-  /// @brief CO2 threshold to turn outputs ON (ppm).
-  float co2OnPpm = 1200.0f;
-
-  /// @brief CO2 threshold to turn outputs OFF (ppm).
-  float co2OffPpm = 900.0f;
-
-  /// @brief Temperature threshold to turn outputs ON (Â°C).
-  float tempOnC = 28.0f;
-
-  /// @brief Temperature threshold to turn outputs OFF (Â°C).
-  float tempOffC = 24.0f;
-  /// @brief Relative humidity threshold to turn outputs ON (%).
-  float rhOnPct = 80.0f;
-  /// @brief Relative humidity threshold to turn outputs OFF (%).
-  float rhOffPct = 70.0f;
-
-  /// @brief Minimum ON time in milliseconds.
-  uint32_t minOnMs = 30000;
-
-  /// @brief Minimum OFF time in milliseconds.
-  uint32_t minOffMs = 30000;
-
   /// @brief Max queued command mutations processed in one firmware tick.
   uint8_t commandDrainPerTick = 4;
 
@@ -592,9 +520,6 @@ struct RuntimeSettings {
 
   /// @brief Queue depth threshold considered degraded.
   uint8_t commandQueueDegradedDepthThreshold = 6;
-
-  /// @brief Minimum acceptable "fresh" CO2 sample age for output control.
-  uint32_t outputDataStaleMinMs = 300000;
 
   /// @brief Main loop runtime threshold used for slow-tick telemetry.
   uint32_t mainTickSlowThresholdUs = 5000;

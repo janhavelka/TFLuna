@@ -9,8 +9,6 @@
 #include <ArduinoJson.h>
 #include <unity.h>
 
-#include "control/OutputController.h"
-#include "control/OutputLogic.h"
 #include "config/AppConfig.h"
 #include "core/CommandQueue.h"
 #include "core/QueueHealth.h"
@@ -102,270 +100,17 @@ void test_periodic_timer() {
   TEST_ASSERT_TRUE(t.isDue(2000));
 }
 
-void test_output_logic_hysteresis() {
-  OutputLogic logic;
-  OutputLogic::Rule rule;
-  rule.onThreshold = 1200.0f;
-  rule.offThreshold = 900.0f;
-  rule.minOnMs = 1000;
-  rule.minOffMs = 1000;
-  logic.configure(rule);
-  logic.reset(false, 0);
-
-  TEST_ASSERT_FALSE(logic.update(1000.0f, true, 0));
-  TEST_ASSERT_TRUE(logic.update(1300.0f, true, 0));     // immediate turn on allowed
-  TEST_ASSERT_TRUE(logic.update(1000.0f, true, 500));   // hysteresis hold
-  TEST_ASSERT_TRUE(logic.update(800.0f, true, 500));    // min on not elapsed
-  TEST_ASSERT_FALSE(logic.update(800.0f, true, 1500));  // now can turn off
-}
-
-void test_output_controller_temp_source_hysteresis() {
-  OutputController outputs;
-  HardwareSettings hw{};
-  hw.mosfet1Pin = 1;
-  hw.mosfet1ActiveHigh = true;
-
-  RuntimeSettings settings;
-  settings.restoreDefaults();
-  settings.outputsEnabled = true;
-  settings.outputSource = static_cast<uint8_t>(OutputSource::TEMP);
-  settings.outputValveChannel = 0;
-  settings.outputFanChannel = RuntimeSettings::OUTPUT_CHANNEL_DISABLED;
-  settings.outputFanPwmPercent = 0;
-  settings.tempOnC = 27.0f;
-  settings.tempOffC = 26.0f;
-  settings.minOnMs = 3000;
-  settings.minOffMs = 3000;
-  TEST_ASSERT_TRUE(outputs.begin(hw, settings).ok());
-
-  Sample sample{};
-  sample.validMask = VALID_TEMP;
-  sample.tempC = 25.0f;
-  outputs.tick(sample, 0);
-  TEST_ASSERT_FALSE(outputs.channelState(0));
-
-  sample.tempC = 27.2f;
-  outputs.tick(sample, 100);
-  TEST_ASSERT_TRUE(outputs.channelState(0));
-
-  sample.tempC = 25.0f;
-  outputs.tick(sample, 2000);
-  TEST_ASSERT_TRUE(outputs.channelState(0));
-
-  outputs.tick(sample, 3300);
-  TEST_ASSERT_FALSE(outputs.channelState(0));
-  outputs.end();
-}
-
-void test_output_controller_rh_source_hysteresis() {
-  OutputController outputs;
-  HardwareSettings hw{};
-  hw.mosfet1Pin = 1;
-  hw.mosfet1ActiveHigh = true;
-
-  RuntimeSettings settings;
-  settings.restoreDefaults();
-  settings.outputsEnabled = true;
-  settings.outputSource = static_cast<uint8_t>(OutputSource::RH);
-  settings.outputValveChannel = 0;
-  settings.outputFanChannel = RuntimeSettings::OUTPUT_CHANNEL_DISABLED;
-  settings.outputFanPwmPercent = 0;
-  settings.rhOnPct = 80.0f;
-  settings.rhOffPct = 70.0f;
-  settings.minOnMs = 3000;
-  settings.minOffMs = 3000;
-  TEST_ASSERT_TRUE(outputs.begin(hw, settings).ok());
-
-  Sample sample{};
-  sample.validMask = VALID_RH;
-  sample.rhPct = 65.0f;
-  outputs.tick(sample, 0);
-  TEST_ASSERT_FALSE(outputs.channelState(0));
-
-  sample.rhPct = 82.0f;
-  outputs.tick(sample, 100);
-  TEST_ASSERT_TRUE(outputs.channelState(0));
-
-  sample.rhPct = 68.0f;
-  outputs.tick(sample, 2000);
-  TEST_ASSERT_TRUE(outputs.channelState(0));
-
-  outputs.tick(sample, 3300);
-  TEST_ASSERT_FALSE(outputs.channelState(0));
-  outputs.end();
-}
-
-void test_output_controller_test_override_expires() {
-  OutputController outputs;
-  HardwareSettings hw{};
-  hw.mosfet1Pin = 1;
-  hw.mosfet1ActiveHigh = true;
-
-  RuntimeSettings settings;
-  settings.restoreDefaults();
-  settings.outputsEnabled = true;
-  settings.outputSource = static_cast<uint8_t>(OutputSource::TEMP);
-  settings.outputValveChannel = 0;
-  settings.outputFanChannel = RuntimeSettings::OUTPUT_CHANNEL_DISABLED;
-  settings.outputFanPwmPercent = 0;
-  settings.tempOnC = 27.0f;
-  settings.tempOffC = 26.0f;
-  settings.minOnMs = 3000;
-  settings.minOffMs = 3000;
-  TEST_ASSERT_TRUE(outputs.begin(hw, settings).ok());
-
-  Sample sample{};
-  sample.validMask = VALID_TEMP;
-  sample.tempC = 30.0f;
-  outputs.tick(sample, 0);
-  TEST_ASSERT_TRUE(outputs.channelState(0));
-
-  TEST_ASSERT_TRUE(outputs.setChannelTestOverride(0, true, false, 100).ok());
-  outputs.tick(sample, 200);
-  TEST_ASSERT_FALSE(outputs.channelState(0));
-
-  // Test override auto-expires; automatic temperature control resumes.
-  outputs.tick(sample, 16000);
-  TEST_ASSERT_TRUE(outputs.channelState(0));
-  outputs.end();
-}
-
-void test_output_controller_test_override_survives_apply_settings() {
-  OutputController outputs;
-  HardwareSettings hw{};
-  hw.mosfet1Pin = 1;
-  hw.mosfet1ActiveHigh = true;
-  hw.mosfet2Pin = 2;
-  hw.mosfet2ActiveHigh = true;
-
-  RuntimeSettings settings;
-  settings.restoreDefaults();
-  settings.outputsEnabled = true;
-  settings.outputSource = static_cast<uint8_t>(OutputSource::TEMP);
-  settings.outputValveChannel = 0;
-  settings.outputFanChannel = 1;
-  settings.outputFanPwmPercent = 40;
-  settings.tempOnC = 27.0f;
-  settings.tempOffC = 26.0f;
-  settings.minOnMs = 3000;
-  settings.minOffMs = 3000;
-  TEST_ASSERT_TRUE(outputs.begin(hw, settings).ok());
-
-  Sample sample{};
-  sample.validMask = VALID_TEMP;
-  sample.tempC = 30.0f;
-  outputs.tick(sample, 0);
-  TEST_ASSERT_TRUE(outputs.channelState(0));
-
-  TEST_ASSERT_TRUE(outputs.setChannelTestOverride(0, true, false, 100).ok());
-  outputs.tick(sample, 200);
-  TEST_ASSERT_FALSE(outputs.channelState(0));
-  TEST_ASSERT_EQUAL_UINT8(0x01U, outputs.testOverrideEnabledMask());
-  TEST_ASSERT_EQUAL_UINT8(0x00U, outputs.testOverrideStateMask());
-
-  RuntimeSettings updated = settings;
-  updated.outputFanChannel = RuntimeSettings::OUTPUT_CHANNEL_DISABLED;
-  outputs.applySettings(updated);
-  outputs.tick(sample, 400);
-  TEST_ASSERT_FALSE(outputs.channelState(0));  // test override remains active
-  TEST_ASSERT_EQUAL_UINT8(0x01U, outputs.testOverrideEnabledMask());
-
-  outputs.tick(sample, 16000);
-  TEST_ASSERT_TRUE(outputs.channelState(0));  // override expired, returns to AUTO logic
-  TEST_ASSERT_EQUAL_UINT8(0x00U, outputs.testOverrideEnabledMask());
-  outputs.end();
-}
-
-void test_output_controller_fan_pwm_mapping_on_mosfet() {
-  OutputController outputs;
-  HardwareSettings hw{};
-  hw.mosfet1Pin = 1;
-  hw.mosfet1ActiveHigh = true;
-  hw.mosfet2Pin = 2;
-  hw.mosfet2ActiveHigh = true;
-
-  RuntimeSettings settings;
-  settings.restoreDefaults();
-  settings.outputsEnabled = true;
-  settings.outputSource = static_cast<uint8_t>(OutputSource::CO2);
-  settings.outputValveChannel = 1;
-  settings.outputFanChannel = 0;
-  settings.outputFanPwmPercent = 1;
-  settings.outputFanPeriodMs = 100;
-  settings.outputFanOnMs = 30;
-  settings.co2OnPpm = 1200.0f;
-  settings.co2OffPpm = 900.0f;
-  settings.minOnMs = 1000;
-  settings.minOffMs = 1000;
-  TEST_ASSERT_TRUE(outputs.begin(hw, settings).ok());
-
-  Sample sample{};
-  sample.validMask = VALID_CO2;
-  sample.co2ppm = 600.0f;  // Keep valve OFF in AUTO mode.
-
-  outputs.tick(sample, 10);
-  TEST_ASSERT_TRUE(outputs.channelState(0));   // fan interval gate ON at start of period
-  TEST_ASSERT_FALSE(outputs.channelState(1));  // valve remains OFF
-  TEST_ASSERT_EQUAL_UINT8(30, outputs.fanAppliedPercent());
-
-  outputs.tick(sample, 80);
-  TEST_ASSERT_FALSE(outputs.channelState(0));  // fan interval gate OFF later in same period
-  TEST_ASSERT_FALSE(outputs.channelState(1));
-  TEST_ASSERT_TRUE(outputs.fanState());
-  TEST_ASSERT_EQUAL_UINT8(0, outputs.fanAppliedPercent());
-  outputs.end();
-}
-
-void test_output_controller_valve_never_pwm_on_mosfet() {
-  OutputController outputs;
-  HardwareSettings hw{};
-  hw.mosfet1Pin = 1;
-  hw.mosfet1ActiveHigh = true;
-  hw.mosfet2Pin = 2;
-  hw.mosfet2ActiveHigh = true;
-
-  RuntimeSettings settings;
-  settings.restoreDefaults();
-  settings.outputsEnabled = true;
-  settings.outputSource = static_cast<uint8_t>(OutputSource::CO2);
-  settings.outputValveChannel = 0;
-  settings.outputFanChannel = 1;
-  settings.outputFanPwmPercent = 1;
-  settings.outputFanPeriodMs = 100;
-  settings.outputFanOnMs = 30;
-  settings.co2OnPpm = 1200.0f;
-  settings.co2OffPpm = 900.0f;
-  settings.minOnMs = 1000;
-  settings.minOffMs = 1000;
-  TEST_ASSERT_TRUE(outputs.begin(hw, settings).ok());
-
-  Sample sample{};
-  sample.validMask = VALID_CO2;
-  sample.co2ppm = 1500.0f;
-
-  outputs.tick(sample, 10);
-  TEST_ASSERT_TRUE(outputs.channelState(0));   // Valve ON.
-  TEST_ASSERT_TRUE(outputs.channelState(1));   // Fan interval gate currently ON.
-
-  outputs.tick(sample, 80);
-  TEST_ASSERT_TRUE(outputs.channelState(0));   // Valve remains ON (never interval-gated).
-  TEST_ASSERT_FALSE(outputs.channelState(1));  // Fan interval gate toggles OFF.
-  outputs.end();
-}
-
 void test_settings_validation() {
   RuntimeSettings s;
-  s.sampleIntervalSec = 0;
+  s.sampleIntervalMs = 0;
   TEST_ASSERT_FALSE(s.validate().ok());
 
   s.restoreDefaults();
-  s.co2OnPpm = 800;
-  s.co2OffPpm = 900;
+  s.apAutoOffMs = 0;
   TEST_ASSERT_FALSE(s.validate().ok());
 
   s.restoreDefaults();
-  s.rhOnPct = 60.0f;
-  s.rhOffPct = 70.0f;
+  s.i2cFreqHz = 200000;
   TEST_ASSERT_FALSE(s.validate().ok());
 
   s.restoreDefaults();
@@ -380,23 +125,19 @@ void test_default_rtc_address_is_rv3032() {
   TEST_ASSERT_TRUE(s.i2cRtcEnableEepromWrites);
 }
 
-void test_board_defaults_prepare_endstop_inputs_and_disable_outputs() {
+void test_board_defaults_prepare_endstop_inputs() {
   const HardwareSettings hw = loadHardwareSettings();
   TEST_ASSERT_EQUAL_INT(5, hw.endstopUpperPin);
   TEST_ASSERT_EQUAL_INT(6, hw.endstopLowerPin);
   TEST_ASSERT_TRUE(hw.endstopUpperActiveLow);
   TEST_ASSERT_TRUE(hw.endstopLowerActiveLow);
-  TEST_ASSERT_EQUAL_INT(-1, hw.mosfet1Pin);
-  TEST_ASSERT_EQUAL_INT(-1, hw.mosfet2Pin);
-  TEST_ASSERT_EQUAL_INT(-1, hw.relay1Pin);
-  TEST_ASSERT_EQUAL_INT(-1, hw.relay2Pin);
 }
 
 void test_settings_validation_extremes() {
   RuntimeSettings s;
 
   s.restoreDefaults();
-  s.sampleIntervalSec = RuntimeSettings::MAX_SAMPLE_INTERVAL_SEC + 1U;
+  s.sampleIntervalMs = RuntimeSettings::MAX_SAMPLE_INTERVAL_MS + 1U;
   TEST_ASSERT_FALSE(s.validate().ok());
 
   s.restoreDefaults();
@@ -441,18 +182,6 @@ void test_settings_validation_extremes() {
 
   s.restoreDefaults();
   s.apAutoOffMs = 0;
-  TEST_ASSERT_FALSE(s.validate().ok());
-
-  s.restoreDefaults();
-  s.co2OnPpm = NAN;
-  TEST_ASSERT_FALSE(s.validate().ok());
-
-  s.restoreDefaults();
-  s.co2OffPpm = INFINITY;
-  TEST_ASSERT_FALSE(s.validate().ok());
-
-  s.restoreDefaults();
-  s.minOnMs = 0;
   TEST_ASSERT_FALSE(s.validate().ok());
 
   s.restoreDefaults();
@@ -504,24 +233,7 @@ void test_settings_validation_extremes() {
   TEST_ASSERT_FALSE(s.validate().ok());
 
   s.restoreDefaults();
-  s.outputValveChannel = 4;
-  TEST_ASSERT_FALSE(s.validate().ok());
-
-  s.restoreDefaults();
-  s.outputFanChannel = 4;
-  TEST_ASSERT_FALSE(s.validate().ok());
-
-  s.restoreDefaults();
-  s.outputValveChannel = 0;
-  s.outputFanChannel = 0;
-  TEST_ASSERT_FALSE(s.validate().ok());
-
-  s.restoreDefaults();
-  s.outputSource = 3;
-  TEST_ASSERT_FALSE(s.validate().ok());
-
-  s.restoreDefaults();
-  s.outputFanPwmPercent = 101;
+  s.webMaxRtcBodyBytes = RuntimeSettings::MIN_WEB_MAX_RTC_BODY_BYTES - 1U;
   TEST_ASSERT_FALSE(s.validate().ok());
 
   s.restoreDefaults();
@@ -530,12 +242,12 @@ void test_settings_validation_extremes() {
 }
 
 void test_sample_interval_upper_bound_matches_timer_window() {
-  TEST_ASSERT_EQUAL_UINT32(static_cast<uint32_t>(INT32_MAX / 1000L),
-                           RuntimeSettings::MAX_SAMPLE_INTERVAL_SEC);
+  TEST_ASSERT_EQUAL_UINT32(static_cast<uint32_t>(INT32_MAX),
+                           RuntimeSettings::MAX_SAMPLE_INTERVAL_MS);
 
   RuntimeSettings s;
   s.restoreDefaults();
-  s.sampleIntervalSec = RuntimeSettings::MAX_SAMPLE_INTERVAL_SEC;
+  s.sampleIntervalMs = RuntimeSettings::MAX_SAMPLE_INTERVAL_MS;
   TEST_ASSERT_TRUE(s.validate().ok());
 }
 
@@ -606,9 +318,6 @@ void test_status_json_bounded_serialization() {
   sys.endstopLowerRawHigh = true;
   sys.endstopLowerTriggered = false;
   sys.endstopLowerLastChangeMs = 3333;
-  sys.outputPresentMask = 0x05;
-  sys.outputChannelMask = 0x01;
-
   Sample sample{};
   sample.tsUnix = 1710000000UL;
   strncpy(sample.tsLocal, "2026-01-10 12:34:56", sizeof(sample.tsLocal) - 1);
@@ -631,8 +340,6 @@ void test_status_json_bounded_serialization() {
   TEST_ASSERT_EQUAL_STRING("status", doc["type"].as<const char*>());
   TEST_ASSERT_EQUAL_STRING("DEGRADED", doc["health"].as<const char*>());
   TEST_ASSERT_EQUAL_UINT32(5, doc["cmd_queue_overflow_count"].as<uint32_t>());
-  TEST_ASSERT_EQUAL_UINT32(0x05, doc["output_present_mask"].as<uint32_t>());
-  TEST_ASSERT_EQUAL_UINT32(0x01, doc["output_channel_mask"].as<uint32_t>());
   TEST_ASSERT_EQUAL_STRING("queue full", doc["log_last_error_msg"].as<const char*>());
   TEST_ASSERT_EQUAL_UINT32(2, doc["log_budget_exceeded_count"].as<uint32_t>());
   TEST_ASSERT_EQUAL_INT(5, doc["endstop_upper_pin"].as<int>());
@@ -718,9 +425,29 @@ void test_settings_json_write_only_password() {
   TEST_ASSERT_NOT_NULL(strstr(out, "\"ap_pass_set\":"));
   TEST_ASSERT_NOT_NULL(strstr(out, "\"ap_pass_masked\":"));
   TEST_ASSERT_NOT_NULL(strstr(out, "\"ap_pass_update_mode\":\"write_only\""));
+  TEST_ASSERT_NOT_NULL(strstr(out, "\"cli_verbosity_name\":\"normal\""));
   TEST_ASSERT_NOT_NULL(strstr(out, "\"log_session_name\":\"run\""));
   TEST_ASSERT_NOT_NULL(strstr(out, "\"e2_address\":"));
   TEST_ASSERT_NOT_NULL(strstr(out, "\"e2_recovery_backoff_ms\":"));
+}
+
+void test_cli_verbosity_uses_named_levels() {
+  std::string cliSource;
+  std::string webSource;
+  TEST_ASSERT_TRUE(loadTextFile("src/core/SerialCli.cpp", cliSource));
+  TEST_ASSERT_TRUE(loadTextFile("src/web/WebServer.cpp", webSource));
+
+  TEST_ASSERT_NOT_NULL(strstr(cliSource.c_str(), "return \"off\";"));
+  TEST_ASSERT_NOT_NULL(strstr(cliSource.c_str(), "strcmp(token, \"off\") == 0"));
+  TEST_ASSERT_NOT_NULL(strstr(cliSource.c_str(), "system verbosity <off|normal|verbose> [p]"));
+  TEST_ASSERT_NOT_NULL(
+      strstr(cliSource.c_str(), "invalid verbosity (off|normal|verbose or 0..2)"));
+  TEST_ASSERT_NOT_NULL(strstr(cliSource.c_str(), "system verbosity=%s\\n"));
+  TEST_ASSERT_NULL(
+      strstr(cliSource.c_str(), "system verbosity <0|1|2> [p]  compact|normal|verbose"));
+  TEST_ASSERT_NULL(strstr(cliSource.c_str(), "system verbosity=%s (%u)\\n"));
+  TEST_ASSERT_NOT_NULL(strstr(webSource.c_str(), "Invalid cli_verbosity"));
+  TEST_ASSERT_NOT_NULL(strstr(webSource.c_str(), "strcmp(token, \"off\") == 0"));
 }
 
 void test_led_health_debounce_logic() {
@@ -837,7 +564,7 @@ void test_faster_distance_refresh_defaults() {
   settings.restoreDefaults();
   TEST_ASSERT_FALSE(settings.logDailyEnabled);
   TEST_ASSERT_FALSE(settings.logAllEnabled);
-  TEST_ASSERT_EQUAL_UINT32(250U, settings.i2cDisplayPollMs);
+  TEST_ASSERT_EQUAL_UINT32(100U, settings.i2cDisplayPollMs);
 }
 
 void test_web_live_device_tab_rerenders_distance_stats() {
@@ -876,6 +603,7 @@ void test_web_endstops_tab_replaces_outputs_surface() {
   TEST_ASSERT_NOT_NULL(strstr(text, "renderEndstopsTab"));
   TEST_ASSERT_NULL(strstr(text, "id=\"b-outputs\""));
   TEST_ASSERT_NULL(strstr(text, "<div id=\"outputs\" class=\"tab\">"));
+  TEST_ASSERT_NULL(strstr(text, "outputs:'Outputs'"));
   TEST_ASSERT_NULL(strstr(text, "renderOutputsTab"));
   TEST_ASSERT_NULL(strstr(text, "queueOutputBlink"));
   TEST_ASSERT_NULL(strstr(text, "postOutputTestWithRetry"));
@@ -1861,16 +1589,9 @@ int main(int argc, char** argv) {
   RUN_TEST(test_ring_buffer_order);
   RUN_TEST(test_ring_buffer_oldest_first_returns_latest_window);
   RUN_TEST(test_periodic_timer);
-  RUN_TEST(test_output_logic_hysteresis);
-  RUN_TEST(test_output_controller_temp_source_hysteresis);
-  RUN_TEST(test_output_controller_rh_source_hysteresis);
-  RUN_TEST(test_output_controller_test_override_expires);
-  RUN_TEST(test_output_controller_test_override_survives_apply_settings);
-  RUN_TEST(test_output_controller_fan_pwm_mapping_on_mosfet);
-  RUN_TEST(test_output_controller_valve_never_pwm_on_mosfet);
   RUN_TEST(test_settings_validation);
   RUN_TEST(test_default_rtc_address_is_rv3032);
-  RUN_TEST(test_board_defaults_prepare_endstop_inputs_and_disable_outputs);
+  RUN_TEST(test_board_defaults_prepare_endstop_inputs);
   RUN_TEST(test_settings_validation_extremes);
   RUN_TEST(test_sample_interval_upper_bound_matches_timer_window);
   RUN_TEST(test_app_settings_validation_guards_present);
@@ -1880,6 +1601,7 @@ int main(int argc, char** argv) {
   RUN_TEST(test_device_json_escaping_and_parseability);
   RUN_TEST(test_graph_sample_json_nan_outputs_null);
   RUN_TEST(test_settings_json_write_only_password);
+  RUN_TEST(test_cli_verbosity_uses_named_levels);
   RUN_TEST(test_led_health_debounce_logic);
   RUN_TEST(test_log_flush_due_logic);
   RUN_TEST(test_lidar_stats_reset_clears_running_window);

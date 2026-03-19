@@ -283,18 +283,6 @@ void printOkf(const char* fmt, ...) {
   Serial.printf("%sOK%s %s\n", CLI_ANSI_OK, CLI_ANSI_RESET, line);
 }
 
-const char* overrideModeToStr(OutputOverrideMode mode) {
-  switch (mode) {
-    case OutputOverrideMode::FORCE_ON:
-      return "FORCE_ON";
-    case OutputOverrideMode::FORCE_OFF:
-      return "FORCE_OFF";
-    case OutputOverrideMode::AUTO:
-    default:
-      return "AUTO";
-  }
-}
-
 const char* i2cRawOpToStr(I2cRawOp op) {
   switch (op) {
     case I2cRawOp::WRITE:
@@ -370,7 +358,7 @@ const char* sdCardTypeToStr(uint8_t code) {
 const char* cliVerbosityToStr(uint8_t level) {
   switch (level) {
     case 0:
-      return "compact";
+      return "off";
     case 1:
       return "normal";
     case 2:
@@ -386,7 +374,7 @@ bool parseCliVerbosityToken(const char* token, uint8_t& out) {
   if (token == nullptr) {
     return false;
   }
-  if (strcmp(token, "compact") == 0) {
+  if (strcmp(token, "off") == 0 || strcmp(token, "compact") == 0) {
     out = 0U;
     return true;
   }
@@ -563,19 +551,6 @@ bool parseI8Token(const char* token, int8_t& out) {
   return true;
 }
 
-bool parseFloatToken(const char* token, float& out) {
-  if (token == nullptr || token[0] == '\0') {
-    return false;
-  }
-  char* end = nullptr;
-  const float value = strtof(token, &end);
-  if (end == token || *end != '\0' || !isfinite(value)) {
-    return false;
-  }
-  out = value;
-  return true;
-}
-
 bool isApPassSettingKey(const char* key) {
   static const char kApPass[] = {'a', 'p', '_', 'p', 'a', 's', 's', '\0'};
   return key != nullptr && (strcmp(key, kApPass) == 0 || strcmp(key, "ap_secret") == 0);
@@ -614,7 +589,6 @@ bool isSettingGroup(const char* group) {
          strcmp(group, "co2") == 0 ||
          strcmp(group, "e2") == 0 ||
          strcmp(group, "wifi") == 0 ||
-         strcmp(group, "outputs") == 0 ||
          strcmp(group, "leds") == 0 ||
          strcmp(group, "web") == 0;
 }
@@ -839,82 +813,6 @@ bool resolveGroupedSettingKey(const char* group,
     return false;
   }
 
-  if (strcmp(group, "outputs") == 0) {
-    if (strcmp(key, "enabled") == 0) {
-      outKey = "outputs_enabled";
-      return true;
-    }
-    if (strcmp(key, "on_ppm") == 0) {
-      outKey = "co2_on_ppm";
-      return true;
-    }
-    if (strcmp(key, "off_ppm") == 0) {
-      outKey = "co2_off_ppm";
-      return true;
-    }
-    if (strcmp(key, "min_on_ms") == 0) {
-      outKey = "min_on_ms";
-      return true;
-    }
-    if (strcmp(key, "min_off_ms") == 0) {
-      outKey = "min_off_ms";
-      return true;
-    }
-    if (strcmp(key, "data_stale_min_ms") == 0 || strcmp(key, "output_data_stale_min_ms") == 0) {
-      outKey = "output_data_stale_min_ms";
-      return true;
-    }
-    if (strcmp(key, "on_temp") == 0 || strcmp(key, "temp_on_c") == 0) {
-      outKey = "temp_on_c";
-      return true;
-    }
-    if (strcmp(key, "off_temp") == 0 || strcmp(key, "temp_off_c") == 0) {
-      outKey = "temp_off_c";
-      return true;
-    }
-    if (strcmp(key, "on_rh") == 0 || strcmp(key, "rh_on_pct") == 0) {
-      outKey = "rh_on_pct";
-      return true;
-    }
-    if (strcmp(key, "off_rh") == 0 || strcmp(key, "rh_off_pct") == 0) {
-      outKey = "rh_off_pct";
-      return true;
-    }
-    if (strcmp(key, "source") == 0 || strcmp(key, "output_source") == 0) {
-      outKey = "output_source";
-      return true;
-    }
-    if (strcmp(key, "valve_channel") == 0 || strcmp(key, "output_valve_channel") == 0) {
-      outKey = "output_valve_channel";
-      return true;
-    }
-    if (strcmp(key, "valve_powered_closes") == 0 || strcmp(key, "output_valve_powered_closes") == 0) {
-      outKey = "output_valve_powered_closes";
-      return true;
-    }
-    if (strcmp(key, "fan_channel") == 0 || strcmp(key, "output_fan_channel") == 0) {
-      outKey = "output_fan_channel";
-      return true;
-    }
-    if (strcmp(key, "fan_pwm_percent") == 0 || strcmp(key, "output_fan_pwm_percent") == 0 ||
-        strcmp(key, "fan_pwm") == 0) {
-      outKey = "output_fan_pwm_percent";
-      return true;
-    }
-    if (strcmp(key, "fan_period_ms") == 0 || strcmp(key, "output_fan_period_ms") == 0 ||
-        strcmp(key, "fan_period") == 0) {
-      outKey = "output_fan_period_ms";
-      return true;
-    }
-    if (strcmp(key, "fan_on_ms") == 0 || strcmp(key, "output_fan_on_ms") == 0 ||
-        strcmp(key, "fan_on") == 0) {
-      outKey = "output_fan_on_ms";
-      return true;
-    }
-    errorMsg = "unknown outputs key";
-    return false;
-  }
-
   if (strcmp(group, "system") == 0) {
     if (strcmp(key, "verbosity") == 0 || strcmp(key, "cli_verbosity") == 0) {
       outKey = "cli_verbosity";
@@ -999,9 +897,6 @@ const char* settingsSectionForDevice(const char* deviceName) {
   if (strcmp(normalized, "wifi") == 0) {
     return "wifi";
   }
-  if (strcmp(normalized, "outputs") == 0) {
-    return "outputs";
-  }
   if (strcmp(normalized, "web") == 0) {
     return "web";
   }
@@ -1032,51 +927,11 @@ const char* envModelHint(uint8_t address) {
   return "unknown";
 }
 
-const char* cliOutputSourceToStr(uint8_t source) {
-  switch (static_cast<OutputSource>(source)) {
-    case OutputSource::TEMP:
-      return "temp";
-    case OutputSource::RH:
-      return "humidity";
-    case OutputSource::CO2:
-    default:
-      return "co2";
-  }
-}
-
 bool parseI2cAddressToken(const char* token, uint8_t& out) {
   if (!parseU8Token(token, out)) {
     return false;
   }
   return out >= 0x01U && out <= 0x7FU;
-}
-
-bool parseOutputSourceToken(const char* token, uint8_t& out) {
-  if (token == nullptr) {
-    return false;
-  }
-  if (strcmp(token, "co2") == 0 || strcmp(token, "lidar") == 0 ||
-      strcmp(token, "distance") == 0 || strcmp(token, "tfluna") == 0) {
-    out = static_cast<uint8_t>(OutputSource::CO2);
-    return true;
-  }
-  if (strcmp(token, "temp") == 0 || strcmp(token, "temperature") == 0) {
-    out = static_cast<uint8_t>(OutputSource::TEMP);
-    return true;
-  }
-  if (strcmp(token, "rh") == 0 || strcmp(token, "humidity") == 0) {
-    out = static_cast<uint8_t>(OutputSource::RH);
-    return true;
-  }
-  uint8_t numeric = 0;
-  if (!parseU8Token(token, numeric)) {
-    return false;
-  }
-  if (numeric > static_cast<uint8_t>(OutputSource::RH)) {
-    return false;
-  }
-  out = numeric;
-  return true;
 }
 
 bool applySettingByKey(RuntimeSettings& settings,
@@ -1154,7 +1009,7 @@ bool applySettingByKey(RuntimeSettings& settings,
   if (strcmp(key, "cli_verbosity") == 0) {
     return parseCliVerbosityToken(value, settings.cliVerbosity)
                ? true
-               : (errorMsg = "invalid verbosity (0..2|compact|normal|verbose)", false);
+               : (errorMsg = "invalid verbosity (off|normal|verbose or 0..2)", false);
   }
   if (strcmp(key, "i2c_freq_hz") == 0) {
     return parseU32Token(value, settings.i2cFreqHz) ? true : (errorMsg = "invalid u32", false);
@@ -1362,54 +1217,6 @@ bool applySettingByKey(RuntimeSettings& settings,
   if (strcmp(key, "ap_auto_off_ms") == 0) {
     return parseU32Token(value, settings.apAutoOffMs) ? true : (errorMsg = "invalid u32", false);
   }
-  if (strcmp(key, "outputs_enabled") == 0) {
-    return parseBoolToken(value, settings.outputsEnabled) ? true : (errorMsg = "invalid bool", false);
-  }
-  if (strcmp(key, "output_source") == 0) {
-    return parseOutputSourceToken(value, settings.outputSource) ? true : (errorMsg = "invalid output source", false);
-  }
-  if (strcmp(key, "output_valve_channel") == 0) {
-    return parseU8Token(value, settings.outputValveChannel) ? true : (errorMsg = "invalid u8", false);
-  }
-  if (strcmp(key, "output_valve_powered_closes") == 0) {
-    return parseBoolToken(value, settings.outputValvePoweredClosed) ? true : (errorMsg = "invalid bool", false);
-  }
-  if (strcmp(key, "output_fan_channel") == 0) {
-    return parseU8Token(value, settings.outputFanChannel) ? true : (errorMsg = "invalid u8", false);
-  }
-  if (strcmp(key, "output_fan_pwm_percent") == 0) {
-    return parseU8Token(value, settings.outputFanPwmPercent) ? true : (errorMsg = "invalid u8", false);
-  }
-  if (strcmp(key, "output_fan_period_ms") == 0) {
-    return parseU32Token(value, settings.outputFanPeriodMs) ? true : (errorMsg = "invalid u32", false);
-  }
-  if (strcmp(key, "output_fan_on_ms") == 0) {
-    return parseU32Token(value, settings.outputFanOnMs) ? true : (errorMsg = "invalid u32", false);
-  }
-  if (strcmp(key, "co2_on_ppm") == 0) {
-    return parseFloatToken(value, settings.co2OnPpm) ? true : (errorMsg = "invalid float", false);
-  }
-  if (strcmp(key, "co2_off_ppm") == 0) {
-    return parseFloatToken(value, settings.co2OffPpm) ? true : (errorMsg = "invalid float", false);
-  }
-  if (strcmp(key, "temp_on_c") == 0) {
-    return parseFloatToken(value, settings.tempOnC) ? true : (errorMsg = "invalid float", false);
-  }
-  if (strcmp(key, "temp_off_c") == 0) {
-    return parseFloatToken(value, settings.tempOffC) ? true : (errorMsg = "invalid float", false);
-  }
-  if (strcmp(key, "rh_on_pct") == 0) {
-    return parseFloatToken(value, settings.rhOnPct) ? true : (errorMsg = "invalid float", false);
-  }
-  if (strcmp(key, "rh_off_pct") == 0) {
-    return parseFloatToken(value, settings.rhOffPct) ? true : (errorMsg = "invalid float", false);
-  }
-  if (strcmp(key, "min_on_ms") == 0) {
-    return parseU32Token(value, settings.minOnMs) ? true : (errorMsg = "invalid u32", false);
-  }
-  if (strcmp(key, "min_off_ms") == 0) {
-    return parseU32Token(value, settings.minOffMs) ? true : (errorMsg = "invalid u32", false);
-  }
   if (strcmp(key, "command_drain_per_tick") == 0) {
     return parseU8Token(value, settings.commandDrainPerTick) ? true : (errorMsg = "invalid u8", false);
   }
@@ -1418,9 +1225,6 @@ bool applySettingByKey(RuntimeSettings& settings,
   }
   if (strcmp(key, "command_queue_degraded_depth_threshold") == 0) {
     return parseU8Token(value, settings.commandQueueDegradedDepthThreshold) ? true : (errorMsg = "invalid u8", false);
-  }
-  if (strcmp(key, "output_data_stale_min_ms") == 0) {
-    return parseU32Token(value, settings.outputDataStaleMinMs) ? true : (errorMsg = "invalid u32", false);
   }
   if (strcmp(key, "main_tick_slow_threshold_us") == 0) {
     return parseU32Token(value, settings.mainTickSlowThresholdUs) ? true : (errorMsg = "invalid u32", false);
@@ -1516,7 +1320,6 @@ void SerialCli::printHelp(const char* topic) {
     printHelpLine("i2c", "I2C bus diagnostics and settings");
     printHelpLine("display", "SSD1315 display control");
     printHelpLine("sd", "SD logger control");
-    printHelpLine("outputs", "Output control and thresholds");
     printHelpLine("wifi", "SoftAP control");
     printHelpLine("web", "Web server limits");
     printHelpLine("system", "System timing/control settings");
@@ -1635,7 +1438,7 @@ void SerialCli::printHelp(const char* topic) {
     printTopicMeta("Returns");
     Serial.println("  Last sampled measurements and timestamps from runtime cache.");
     printTopicMeta("Use when");
-    Serial.println("  Verifying data path/output logic without forcing sensor traffic.");
+    Serial.println("  Verifying the live data path without forcing sensor traffic.");
     return;
   }
 
@@ -1672,8 +1475,6 @@ void SerialCli::printHelp(const char* topic) {
     Serial.println("  device <lidar|i2c|env|rtc> recover");
     Serial.println("  device sd remount");
     Serial.println("  device sd ls [path]");
-    Serial.println("  device outputs state");
-    Serial.println("  device outputs mode <auto|on|off>");
     Serial.println("  device wifi <on|off> [persist]");
     printTopicMeta("Returns");
     Serial.println("  Delegates to domain command and prints same output contract.");
@@ -1932,39 +1733,6 @@ void SerialCli::printHelp(const char* topic) {
     return;
   }
 
-  if (strcmp(resolved, "outputs") == 0) {
-    printTopicHeader("Output Control");
-    printTopicGroup("Status");
-    Serial.println("  outputs status       Health and config summary");
-    Serial.println("  outputs state        Current pin states");
-    Serial.println("  outputs settings     All output settings");
-    Serial.println();
-    printTopicGroup("Override");
-    Serial.println("  outputs mode <auto|on|off>   Force outputs on/off or auto");
-    Serial.println("  outputs enabled <on|off> [p] Enable/disable auto control");
-    Serial.println();
-    printTopicGroup("Thresholds");
-    Serial.println("  outputs source  <0|1|2> [p]  Source: 0=CO2, 1=temp, 2=humidity");
-    Serial.println("  outputs on_ppm  <val>  [p]   CO2 turn-on  (default 1200)");
-    Serial.println("  outputs off_ppm <val>  [p]   CO2 turn-off (default 900)");
-    Serial.println("  outputs on_temp  <C>   [p]   Temp turn-on  (default 28)");
-    Serial.println("  outputs off_temp <C>   [p]   Temp turn-off (default 24)");
-    Serial.println("  outputs on_rh    <%>   [p]   Humidity turn-on  (default 80)");
-    Serial.println("  outputs off_rh   <%>   [p]   Humidity turn-off (default 70)");
-    Serial.println("  outputs fan_period <ms> [p]  Fan interval period (0=continuous)");
-    Serial.println("  outputs fan_on     <ms> [p]  Fan ON window within period");
-    Serial.println("  outputs min_on  <ms>  [p]    Min on  duration");
-    Serial.println("  outputs min_off <ms>  [p]    Min off duration");
-    Serial.println("  outputs stale   <ms>  [p]    Stale reading timeout");
-    Serial.println();
-    Serial.println("  [p] = optional persist:0|1");
-    printTopicMeta("Returns");
-    Serial.println("  status/state show source selection, thresholds, mode, and pin states.");
-    printTopicMeta("Possibilities");
-    Serial.println("  Closed-loop fan/control behavior with hysteresis and safety timers.");
-    return;
-  }
-
   if (strcmp(resolved, "web") == 0) {
     printTopicHeader("Web Server");
     printTopicGroup("Status");
@@ -1991,7 +1759,7 @@ void SerialCli::printHelp(const char* topic) {
     Serial.println();
     printTopicGroup("Settings ([p] = persist:0|1)");
     Serial.println("  system sample_interval <sec> [p]");
-    Serial.println("  system verbosity <0|1|2> [p]  compact|normal|verbose");
+    Serial.println("  system verbosity <off|normal|verbose> [p]");
     Serial.println("  system command_drain <n> [p]");
     Serial.println("  system command_window <ms> [p]");
     Serial.println("  system command_depth <n> [p]");
@@ -2034,7 +1802,7 @@ void SerialCli::printHelp(const char* topic) {
     printTopicHeader("Settings");
     printTopicGroup("View");
     Serial.println("  settings show [section]   all|log|sd|lidar|i2c|env|rtc|");
-    Serial.println("                            display|wifi|outputs|");
+    Serial.println("                            display|wifi|");
     Serial.println("                            system|leds|web");
     Serial.println("  set list [group]          List keys in group");
     Serial.println();
@@ -2047,7 +1815,6 @@ void SerialCli::printHelp(const char* topic) {
     Serial.println("  set lidar min_strength 80");
     Serial.println("  set rtc poll_ms 2000");
     Serial.println("  set i2c op_timeout_ms 30");
-    Serial.println("  set outputs on_temp 28 1");
     Serial.println();
     Serial.println("  factory_reset [persist]   Restore defaults");
     printTopicMeta("Returns");
@@ -2096,7 +1863,7 @@ void SerialCli::printHelp(const char* topic) {
 
 void SerialCli::printStatus() {
   const uint8_t verbosity = currentVerbosity();
-  const bool compact = verbosity == 0U;
+  const bool minimalOutput = verbosity == 0U;
   const bool verbose = verbosity >= 2U;
   SystemStatus sys{};
   Sample latest{};
@@ -2112,16 +1879,15 @@ void SerialCli::printStatus() {
   Serial.printf("  %s%-28s%s %lu ms\n", CLI_ANSI_INFO, "Uptime", CLI_ANSI_RESET, static_cast<unsigned long>(sys.uptimeMs));
   formatUptimeHuman(sys.uptimeMs, buf, sizeof(buf));
   Serial.printf("  %s%-28s%s %s\n", CLI_ANSI_INFO, "Uptime (human)", CLI_ANSI_RESET, buf);
-  Serial.printf("  %s%-28s%s %s (%u)\n",
+  Serial.printf("  %s%-28s%s %s\n",
                 CLI_ANSI_INFO,
                 "CLI verbosity",
                 CLI_ANSI_RESET,
-                cliVerbosityToStr(verbosity),
-                static_cast<unsigned int>(verbosity));
+                cliVerbosityToStr(verbosity));
   Serial.printf("  %s%-28s%s %s\n", CLI_ANSI_INFO, "Time source", CLI_ANSI_RESET, sys.timeSource);
   Serial.printf("  %s%-28s%s %lu\n", CLI_ANSI_INFO, "Samples", CLI_ANSI_RESET, static_cast<unsigned long>(sys.sampleCount));
   Serial.printf("  %s%-28s%s %lu ms\n", CLI_ANSI_INFO, "Last sample", CLI_ANSI_RESET, static_cast<unsigned long>(sys.lastSampleMs));
-  if (!compact) {
+  if (!minimalOutput) {
     Serial.println();
     Serial.printf("%s[Tick Timing]%s\n", CLI_ANSI_WARN, CLI_ANSI_RESET);
     Serial.printf("  %s%-28s%s %lu us\n", CLI_ANSI_INFO, "Last", CLI_ANSI_RESET, static_cast<unsigned long>(sys.tickLastDurationUs));
@@ -2140,7 +1906,7 @@ void SerialCli::printStatus() {
                 CLI_ANSI_RESET,
                 static_cast<unsigned long>(sys.logQueueDepth),
                 static_cast<unsigned long>(sys.logQueueCapacity));
-  if (!compact) {
+  if (!minimalOutput) {
     Serial.printf("  %s%-28s%s %lu / %lu\n",
                   CLI_ANSI_INFO,
                   "Event queue depth",
@@ -2153,10 +1919,10 @@ void SerialCli::printStatus() {
                   sys.logEventQueueUsingPsram ? "PSRAM" : "Internal");
   }
   printCounterVal("Dropped", sys.logDroppedCount);
-  if (!compact) {
+  if (!minimalOutput) {
     Serial.printf("  %s%-28s%s %s\n", CLI_ANSI_INFO, "Last error", CLI_ANSI_RESET, sys.logLastErrorMsg);
   }
-  if (!compact && sys.sdInfoValid) {
+  if (!minimalOutput && sys.sdInfoValid) {
     Serial.printf("  %s%-28s%s %s\n", CLI_ANSI_INFO, "Filesystem", CLI_ANSI_RESET, sdFsTypeToStr(sys.sdFsType));
     Serial.printf("  %s%-28s%s %s\n", CLI_ANSI_INFO, "Card type", CLI_ANSI_RESET, sdCardTypeToStr(sys.sdCardType));
     sprintBytesHuman(buf, sizeof(buf), sys.sdFsCapacityBytes);
@@ -2179,7 +1945,7 @@ void SerialCli::printStatus() {
   Serial.printf("  %s%-28s%s %s\n", CLI_ANSI_INFO, "Backend", CLI_ANSI_RESET, sys.i2cBackendName);
   Serial.printf("  %s%-28s%s %lu\n", CLI_ANSI_INFO, "Request queue", CLI_ANSI_RESET, static_cast<unsigned long>(sys.i2cRequestQueueDepth));
   Serial.printf("  %s%-28s%s %lu\n", CLI_ANSI_INFO, "Result queue", CLI_ANSI_RESET, static_cast<unsigned long>(sys.i2cResultQueueDepth));
-  if (!compact) {
+  if (!minimalOutput) {
     printCounterVal("Stuck SDA", sys.i2cStuckSdaCount);
     printCounterVal("Fast fail", sys.i2cStuckBusFastFailCount);
     printCounterVal("Request overflow", sys.i2cRequestOverflowCount);
@@ -2209,7 +1975,7 @@ void SerialCli::printStatus() {
   Serial.printf("  %s%-28s%s %u\n", CLI_ANSI_INFO, "Stations", CLI_ANSI_RESET, static_cast<unsigned int>(sys.wifiStationCount));
   Serial.printf("  %s%-28s%s %lu\n", CLI_ANSI_INFO, "Web clients", CLI_ANSI_RESET, static_cast<unsigned long>(sys.webClientCount));
   Serial.printf("  %s%-28s%s %lu\n", CLI_ANSI_INFO, "Command queue", CLI_ANSI_RESET, static_cast<unsigned long>(sys.commandQueueDepth));
-  if (!compact) {
+  if (!minimalOutput) {
     printCounterVal("Command overflow", sys.commandQueueOverflowCount);
   }
   if (verbose) {
@@ -2271,7 +2037,7 @@ void SerialCli::printStatus() {
     Serial.printf("  %s%-28s%s %.2f C\n", CLI_ANSI_INFO, "LiDAR temp", CLI_ANSI_RESET, static_cast<double>(latest.lidarTempC));
     Serial.printf("  %s%-28s%s %s\n", CLI_ANSI_INFO, "Valid frame", CLI_ANSI_RESET, yesNo(latest.validFrame));
     Serial.printf("  %s%-28s%s %s\n", CLI_ANSI_INFO, "Signal OK", CLI_ANSI_RESET, yesNo(latest.signalOk));
-    if (!compact) {
+    if (!minimalOutput) {
       Serial.printf("  %s%-28s%s %.2f C\n", CLI_ANSI_INFO, "Temperature", CLI_ANSI_RESET, static_cast<double>(latest.tempC));
       Serial.printf("  %s%-28s%s %.2f %%\n", CLI_ANSI_INFO, "Humidity", CLI_ANSI_RESET, static_cast<double>(latest.rhPct));
       Serial.printf("  %s%-28s%s %.2f hPa\n", CLI_ANSI_INFO, "Pressure", CLI_ANSI_RESET, static_cast<double>(latest.pressureHpa));
@@ -2353,7 +2119,7 @@ void SerialCli::printDevice(const char* name) {
   }
 
   const uint8_t verbosity = currentVerbosity();
-  const bool compact = verbosity == 0U;
+  const bool minimalOutput = verbosity == 0U;
 
   size_t count = 0;
   if (!loadDeviceStatuses(count)) {
@@ -2447,7 +2213,7 @@ void SerialCli::printDevice(const char* name) {
   }
 
   if (strcmp(found->name, "rtc") == 0) {
-    if (!compact && haveSettings) {
+    if (!minimalOutput && haveSettings) {
       Serial.println();
       printSection("RTC Configuration");
       printHex8Val("I2C address", settings.i2cRtcAddress);
@@ -2468,7 +2234,7 @@ void SerialCli::printDevice(const char* name) {
   }
 
   if (strcmp(found->name, "env") == 0) {
-    if (!compact && haveSettings) {
+    if (!minimalOutput && haveSettings) {
       Serial.println();
       printSection("ENV Configuration");
       printHex8Val("I2C address", settings.i2cEnvAddress);
@@ -2513,7 +2279,7 @@ void SerialCli::printDevice(const char* name) {
     printCounterU32("Dropped writes", sys.logDroppedCount);
     printCounterU32("Dropped events", sys.logEventDroppedCount);
     printU32Val("Last write age", sys.logLastWriteAgeMs, "ms");
-    if (!compact && sys.sdInfoValid) {
+    if (!minimalOutput && sys.sdInfoValid) {
       uint32_t usagePct = 0U;
       if (sys.sdUsageValid && sys.sdFsCapacityBytes > 0U) {
         const uint64_t pct = (sys.sdFsUsedBytes * 100ULL) / sys.sdFsCapacityBytes;
@@ -2548,9 +2314,8 @@ void SerialCli::printDevice(const char* name) {
         char verbosityBuf[24];
         snprintf(verbosityBuf,
                  sizeof(verbosityBuf),
-                 "%s (%u)",
-                 cliVerbosityToStr(settings.cliVerbosity),
-                 static_cast<unsigned int>(settings.cliVerbosity));
+                 "%s",
+                 cliVerbosityToStr(settings.cliVerbosity));
         printVal("CLI verbosity", verbosityBuf);
       }
       Serial.println();
@@ -2559,7 +2324,7 @@ void SerialCli::printDevice(const char* name) {
       printI32Val("ESP32 TX pin", hw.lidarTx);
       printU32Val("UART index", hw.lidarUartIndex);
       printVal("Mapping", "sensor TX -> ESP RX, sensor RX -> ESP TX");
-      if (!compact && haveSys) {
+      if (!minimalOutput && haveSys) {
         Serial.println();
         printSection("TF-Luna Stats");
         printU32Val("Frames parsed", sys.lidarFramesParsed);
@@ -2586,49 +2351,13 @@ void SerialCli::printDevice(const char* name) {
     }
   }
 
-  if (strcmp(found->name, "outputs") == 0) {
-    bool states[HardwareSettings::OUTPUT_CHANNEL_COUNT] = {};
-    bool haveStates = true;
-    for (size_t i = 0; i < HardwareSettings::OUTPUT_CHANNEL_COUNT; ++i) {
-      if (!_app.tryGetOutputChannelState(i, states[i])) {
-        haveStates = false;
-        break;
-      }
-    }
-    const OutputOverrideMode mode = _app.getOutputOverrideMode();
-    Serial.println();
-    printSection("Output Control");
-    printVal("Override mode", overrideModeToStr(mode));
-    if (!compact && haveSettings) {
-      printBoolVal("Enabled", settings.outputsEnabled);
-      printVal("Source", cliOutputSourceToStr(settings.outputSource));
-      printFloatVal("CO2 ON threshold", settings.co2OnPpm, "ppm");
-      printFloatVal("CO2 OFF threshold", settings.co2OffPpm, "ppm");
-      printFloatVal("Temp ON threshold", settings.tempOnC, "C");
-      printFloatVal("Temp OFF threshold", settings.tempOffC, "C");
-      printFloatVal("Humidity ON threshold", settings.rhOnPct, "%");
-      printFloatVal("Humidity OFF threshold", settings.rhOffPct, "%");
-      printU32Val("Min ON time", settings.minOnMs, "ms");
-      printU32Val("Min OFF time", settings.minOffMs, "ms");
-      printU32Val("Data stale timeout", settings.outputDataStaleMinMs, "ms");
-    }
-    if (haveStates) {
-      Serial.println();
-      printSection("Channel States");
-      printBoolVal("CH0 (MOSFET 1)", states[0]);
-      printBoolVal("CH1 (MOSFET 2)", states[1]);
-      printBoolVal("CH2 (Relay 1)", states[2]);
-      printBoolVal("CH3 (Relay 2)", states[3]);
-    }
-  }
-
   if (strcmp(found->name, "wifi") == 0 && haveSys) {
     Serial.println();
     printSection("WiFi State");
     printBoolVal("AP running", sys.wifiApRunning);
     printU32Val("Connected stations", sys.wifiStationCount);
     printU32Val("Web clients", sys.webClientCount);
-    if (!compact && haveSettings) {
+    if (!minimalOutput && haveSettings) {
       Serial.println();
       printSection("WiFi Configuration");
       printBoolVal("Enabled", settings.wifiEnabled);
@@ -2645,11 +2374,11 @@ void SerialCli::printDevice(const char* name) {
     printSection("Web Server State");
     printU32Val("Active clients", sys.webClientCount);
     printU32Val("Command queue depth", sys.commandQueueDepth);
-    if (!compact) {
+    if (!minimalOutput) {
       printCounterU32("Command overflows", sys.commandQueueOverflowCount);
       printU32Val("Last overflow", sys.commandQueueLastOverflowMs, "ms");
     }
-    if (!compact && haveSettings) {
+    if (!minimalOutput && haveSettings) {
       Serial.println();
       printSection("Web Configuration");
       printU32Val("Max settings body", settings.webMaxSettingsBodyBytes, "B");
@@ -2666,7 +2395,7 @@ void SerialCli::printDevice(const char* name) {
     printU32Val("Health LED index", hw.healthLedIndex);
     printU32Val("Brightness", hw.ledBrightness);
     printU32Val("Smooth step", hw.ledSmoothStepMs, "ms");
-    if (!compact && haveSettings) {
+    if (!minimalOutput && haveSettings) {
       Serial.println();
       printSection("LED Configuration");
       printU32Val("Health init grace", settings.ledHealthInitMs, "ms");
@@ -2734,7 +2463,7 @@ void SerialCli::printEvents(size_t count) {
 
 void SerialCli::printRead(const char* which) {
   const uint8_t verbosity = currentVerbosity();
-  const bool compact = verbosity == 0U;
+  const bool minimalOutput = verbosity == 0U;
   const bool verbose = verbosity >= 2U;
   Sample latest{};
   if (!_app.getLatestSample(latest)) {
@@ -2751,7 +2480,7 @@ void SerialCli::printRead(const char* which) {
     Serial.printf("  %s%-28s%s %.2f C\n", CLI_ANSI_INFO, "LiDAR temp", CLI_ANSI_RESET, static_cast<double>(latest.lidarTempC));
     Serial.printf("  %s%-28s%s %s\n", CLI_ANSI_INFO, "Valid frame", CLI_ANSI_RESET, yesNo(latest.validFrame));
     Serial.printf("  %s%-28s%s %s\n", CLI_ANSI_INFO, "Signal OK", CLI_ANSI_RESET, yesNo(latest.signalOk));
-    if (!compact) {
+    if (!minimalOutput) {
       Serial.printf("  %s%-28s%s %.2f C\n", CLI_ANSI_INFO, "Temperature", CLI_ANSI_RESET, static_cast<double>(latest.tempC));
       Serial.printf("  %s%-28s%s %.2f %%\n", CLI_ANSI_INFO, "Humidity", CLI_ANSI_RESET, static_cast<double>(latest.rhPct));
       Serial.printf("  %s%-28s%s %.2f hPa\n", CLI_ANSI_INFO, "Pressure", CLI_ANSI_RESET, static_cast<double>(latest.pressureHpa));
@@ -2795,7 +2524,7 @@ void SerialCli::printSettings(const char* section) {
     resolved = "all";
   }
   if (strcmp(resolved, "all") != 0 && !isSettingGroup(resolved)) {
-    Serial.printf("%sERR%s section must be all|log|sd|lidar|tfluna|i2c|env|rtc|display|wifi|outputs|system|leds|web\n",
+    Serial.printf("%sERR%s section must be all|log|sd|lidar|tfluna|i2c|env|rtc|display|wifi|system|leds|web\n",
                   CLI_ANSI_ERR,
                   CLI_ANSI_RESET);
     printHint("help settings");
@@ -2818,7 +2547,6 @@ void SerialCli::printSettings(const char* section) {
   const bool showRtc = showI2c || strcmp(resolved, "rtc") == 0;
   const bool showDisplay = showI2c || strcmp(resolved, "display") == 0;
   const bool showWifi = showAll || strcmp(resolved, "wifi") == 0;
-  const bool showOutputs = showAll || strcmp(resolved, "outputs") == 0;
   const bool showWeb = showAll || strcmp(resolved, "web") == 0;
 
   const size_t apPassLen = strnlen(s.apPass, sizeof(s.apPass));
@@ -2833,10 +2561,6 @@ void SerialCli::printSettings(const char* section) {
       default:
         return "unknown";
     }
-  };
-
-  auto outputSourceToStr = [](uint8_t source) -> const char* {
-    return cliOutputSourceToStr(source);
   };
 
   auto printValue = [](const char* name, const char* value) {
@@ -2858,18 +2582,6 @@ void SerialCli::printSettings(const char* section) {
                     name,
                     CLI_ANSI_RESET,
                     static_cast<unsigned long>(value),
-                    unit);
-    }
-  };
-  auto printFloat = [&](const char* name, float value, const char* unit = "") {
-    if (unit[0] == '\0') {
-      Serial.printf("  %s%-28s%s %.2f\n", CLI_ANSI_INFO, name, CLI_ANSI_RESET, static_cast<double>(value));
-    } else {
-      Serial.printf("  %s%-28s%s %.2f %s\n",
-                    CLI_ANSI_INFO,
-                    name,
-                    CLI_ANSI_RESET,
-                    static_cast<double>(value),
                     unit);
     }
   };
@@ -2900,12 +2612,11 @@ void SerialCli::printSettings(const char* section) {
   if (showSystem) {
     beginSection("System");
     printU32("Sample interval", s.sampleIntervalMs, "ms");
-    Serial.printf("  %s%-28s%s %s (%u)\n",
+    Serial.printf("  %s%-28s%s %s\n",
                   CLI_ANSI_INFO,
                   "CLI verbosity",
                   CLI_ANSI_RESET,
-                  cliVerbosityToStr(s.cliVerbosity),
-                  static_cast<unsigned int>(s.cliVerbosity));
+                  cliVerbosityToStr(s.cliVerbosity));
     printU32("Command drain per tick", s.commandDrainPerTick);
     printU32("Queue degraded window", s.commandQueueDegradedWindowMs, "ms");
     printU32("Queue depth threshold", s.commandQueueDegradedDepthThreshold);
@@ -3019,26 +2730,6 @@ void SerialCli::printSettings(const char* section) {
     printU32("AP auto-off", s.apAutoOffMs, "ms");
   }
 
-  if (showOutputs) {
-    beginSection("Outputs");
-    printBool("Enabled", s.outputsEnabled);
-    Serial.printf("  %s%-28s%s %s (%u)\n",
-                  CLI_ANSI_INFO,
-                  "Source",
-                  CLI_ANSI_RESET,
-                  outputSourceToStr(s.outputSource),
-                  static_cast<unsigned int>(s.outputSource));
-    printFloat("CO2 ON threshold", s.co2OnPpm, "ppm");
-    printFloat("CO2 OFF threshold", s.co2OffPpm, "ppm");
-    printFloat("Temp ON threshold", s.tempOnC, "C");
-    printFloat("Temp OFF threshold", s.tempOffC, "C");
-    printFloat("Humidity ON threshold", s.rhOnPct, "%");
-    printFloat("Humidity OFF threshold", s.rhOffPct, "%");
-    printU32("Minimum ON time", s.minOnMs, "ms");
-    printU32("Minimum OFF time", s.minOffMs, "ms");
-    printU32("Data stale threshold", s.outputDataStaleMinMs, "ms");
-  }
-
   if (showWeb) {
     beginSection("Web");
     printU32("Max /api/settings body", s.webMaxSettingsBodyBytes, "B");
@@ -3102,16 +2793,6 @@ void SerialCli::printBootConfig(const char* which) {
                   static_cast<unsigned int>(hw.healthLedIndex),
                   static_cast<unsigned int>(hw.ledBrightness),
                   static_cast<unsigned int>(hw.ledSmoothStepMs));
-    Serial.printf("mosfet1_pin=%d mosfet2_pin=%d relay1_pin=%d relay2_pin=%d\n",
-                  hw.mosfet1Pin,
-                  hw.mosfet2Pin,
-                  hw.relay1Pin,
-                  hw.relay2Pin);
-    Serial.printf("mosfet1_active_high=%u mosfet2_active_high=%u relay1_active_high=%u relay2_active_high=%u\n",
-                  hw.mosfet1ActiveHigh ? 1U : 0U,
-                  hw.mosfet2ActiveHigh ? 1U : 0U,
-                  hw.relay1ActiveHigh ? 1U : 0U,
-                  hw.relay2ActiveHigh ? 1U : 0U);
   }
 
   if (showApp) {
@@ -3158,7 +2839,7 @@ void SerialCli::printSettableKeys(const char* group) {
     resolved = "all";
   }
   if (strcmp(resolved, "all") != 0 && !isSettingGroup(resolved)) {
-    Serial.println("ERR group must be all|system|leds|log|sd|lidar|tfluna|i2c|env|rtc|display|wifi|outputs|web");
+    Serial.println("ERR group must be all|system|leds|log|sd|lidar|tfluna|i2c|env|rtc|display|wifi|web");
     return;
   }
 
@@ -3172,12 +2853,11 @@ void SerialCli::printSettableKeys(const char* group) {
   const bool showRtc = showAll || strcmp(resolved, "rtc") == 0;
   const bool showDisplay = showAll || strcmp(resolved, "display") == 0;
   const bool showWifi = showAll || strcmp(resolved, "wifi") == 0;
-  const bool showOutputs = showAll || strcmp(resolved, "outputs") == 0;
   const bool showWeb = showAll || strcmp(resolved, "web") == 0;
 
   Serial.printf("set list group=%s\n", resolved);
   if (showSystem) {
-    Serial.println("system: sample_interval_ms cli_verbosity command_drain_per_tick command_queue_degraded_window_ms command_queue_degraded_depth_threshold output_data_stale_min_ms main_tick_slow_threshold_us led_health_init_ms led_health_debounce_ms ap_start_retry_backoff_ms");
+    Serial.println("system: sample_interval_ms cli_verbosity command_drain_per_tick command_queue_degraded_window_ms command_queue_degraded_depth_threshold main_tick_slow_threshold_us led_health_init_ms led_health_debounce_ms ap_start_retry_backoff_ms");
   }
   if (showLog) {
     Serial.println("log/sd: daily_enabled all_enabled all_max_bytes flush_ms io_budget_ms mount_retry_ms write_retry_backoff_ms max_write_retries session_name events_max_bytes");
@@ -3200,50 +2880,11 @@ void SerialCli::printSettableKeys(const char* group) {
   if (showWifi) {
     Serial.println("wifi: enabled ssid secret auto_off_ms");
   }
-  if (showOutputs) {
-    Serial.println("outputs: enabled source on_ppm off_ppm on_temp off_temp on_rh off_rh valve_channel valve_powered_closes fan_channel fan_pwm_percent fan_period_ms fan_on_ms min_on_ms min_off_ms data_stale_min_ms");
-  }
   if (showWeb) {
     Serial.println("web: max_settings_body_bytes max_rtc_body_bytes");
   }
   Serial.println("usage: set <group> <key> <value> [persist:0|1]");
   Serial.println("direct mode: set <full_key> <value> [persist:0|1]");
-}
-
-void SerialCli::printOutputState() {
-  bool states[HardwareSettings::OUTPUT_CHANNEL_COUNT] = {};
-  for (size_t i = 0; i < HardwareSettings::OUTPUT_CHANNEL_COUNT; ++i) {
-    if (!_app.tryGetOutputChannelState(i, states[i])) {
-      Serial.println("ERR output state busy");
-      return;
-    }
-  }
-
-  RuntimeSettings s{};
-  const bool hasSettings = _app.tryGetSettingsSnapshot(s);
-
-  const OutputOverrideMode mode = _app.getOutputOverrideMode();
-  Serial.printf("%s[Output State]%s\n", CLI_ANSI_WARN, CLI_ANSI_RESET);
-  Serial.printf("  %s%-28s%s %s\n", CLI_ANSI_INFO, "Override mode", CLI_ANSI_RESET, overrideModeToStr(mode));
-  if (hasSettings) {
-    Serial.printf("  %s%-28s%s %s\n", CLI_ANSI_INFO, "Enabled", CLI_ANSI_RESET, s.outputsEnabled ? "on" : "off");
-    Serial.printf("  %s%-28s%s %s\n", CLI_ANSI_INFO, "Source", CLI_ANSI_RESET,
-                  cliOutputSourceToStr(s.outputSource));
-    Serial.printf("  %s%-28s%s %.2f ppm\n", CLI_ANSI_INFO, "CO2 ON threshold", CLI_ANSI_RESET, static_cast<double>(s.co2OnPpm));
-    Serial.printf("  %s%-28s%s %.2f ppm\n", CLI_ANSI_INFO, "CO2 OFF threshold", CLI_ANSI_RESET, static_cast<double>(s.co2OffPpm));
-    Serial.printf("  %s%-28s%s %.2f C\n", CLI_ANSI_INFO, "Temp ON threshold", CLI_ANSI_RESET, static_cast<double>(s.tempOnC));
-    Serial.printf("  %s%-28s%s %.2f C\n", CLI_ANSI_INFO, "Temp OFF threshold", CLI_ANSI_RESET, static_cast<double>(s.tempOffC));
-    Serial.printf("  %s%-28s%s %.2f %%\n", CLI_ANSI_INFO, "Humidity ON threshold", CLI_ANSI_RESET, static_cast<double>(s.rhOnPct));
-    Serial.printf("  %s%-28s%s %.2f %%\n", CLI_ANSI_INFO, "Humidity OFF threshold", CLI_ANSI_RESET, static_cast<double>(s.rhOffPct));
-    Serial.printf("  %s%-28s%s %lu ms\n", CLI_ANSI_INFO, "Min ON time", CLI_ANSI_RESET, static_cast<unsigned long>(s.minOnMs));
-    Serial.printf("  %s%-28s%s %lu ms\n", CLI_ANSI_INFO, "Min OFF time", CLI_ANSI_RESET, static_cast<unsigned long>(s.minOffMs));
-  }
-  Serial.println();
-  Serial.printf("%s[Channel States]%s\n", CLI_ANSI_WARN, CLI_ANSI_RESET);
-  Serial.printf("  %s%-28s%s %s\n", CLI_ANSI_INFO, "CH0 (MOSFET 1)", CLI_ANSI_RESET, states[0] ? "ON" : "OFF");
-  Serial.printf("  %s%-28s%s %s\n", CLI_ANSI_INFO, "CH1 (MOSFET 2)", CLI_ANSI_RESET, states[1] ? "ON" : "OFF");
-  Serial.printf("  %s%-28s%s %s\n", CLI_ANSI_INFO, "CH2 (Relay 1)", CLI_ANSI_RESET, states[2] ? "ON" : "OFF");
-  Serial.printf("  %s%-28s%s %s\n", CLI_ANSI_INFO, "CH3 (Relay 2)", CLI_ANSI_RESET, states[3] ? "ON" : "OFF");
 }
 
 void SerialCli::printSdInfo() {
@@ -3897,28 +3538,6 @@ void SerialCli::executeLine(char* line, uint32_t nowMs) {
     printOkf("i2c recover queued");
   };
 
-  auto queueOutputMode = [&](const char* modeToken) {
-    OutputOverrideMode mode = OutputOverrideMode::AUTO;
-    if (strcmp(modeToken, "auto") == 0) {
-      mode = OutputOverrideMode::AUTO;
-    } else if (strcmp(modeToken, "on") == 0) {
-      mode = OutputOverrideMode::FORCE_ON;
-    } else if (strcmp(modeToken, "off") == 0) {
-      mode = OutputOverrideMode::FORCE_OFF;
-    } else {
-      Serial.println("ERR usage: outputs mode <auto|on|off>");
-      printHint("help outputs");
-      return;
-    }
-
-    const Status st = _app.enqueueSetOutputOverride(mode);
-    if (!st.ok()) {
-      Serial.printf("ERR outputs mode queue failed: %s (%s)\n", errToStr(st.code), st.msg);
-      return;
-    }
-    printOkf("outputs mode queued: %s", overrideModeToStr(mode));
-  };
-
   auto queueWifiSet = [&](bool enable, bool persist) {
     RuntimeSettings settings{};
     if (!_app.tryGetSettingsSnapshot(settings)) {
@@ -4353,14 +3972,6 @@ void SerialCli::executeLine(char* line, uint32_t nowMs) {
     }
     if (argc == 4 && deviceNameEquals(tokens[1], "sd") && strcmp(tokens[2], "ls") == 0) {
       printSdList(tokens[3]);
-      return;
-    }
-    if (argc == 3 && deviceNameEquals(tokens[1], "outputs") && strcmp(tokens[2], "state") == 0) {
-      printOutputState();
-      return;
-    }
-    if (argc == 4 && deviceNameEquals(tokens[1], "outputs") && strcmp(tokens[2], "mode") == 0) {
-      queueOutputMode(tokens[3]);
       return;
     }
     if ((argc == 3 || argc == 4) && deviceNameEquals(tokens[1], "wifi")) {
@@ -5962,7 +5573,7 @@ void SerialCli::executeLine(char* line, uint32_t nowMs) {
       } else if (strcmp(tokens[2], "normal") == 0 || strcmp(tokens[2], "balanced") == 0) {
         settings.i2cDisplayPollMs = 1000U;
       } else if (strcmp(tokens[2], "fast") == 0) {
-        settings.i2cDisplayPollMs = 250U;
+        settings.i2cDisplayPollMs = 100U;
       } else {
         Serial.println("ERR display profile must be slow|normal|fast");
         return;
@@ -6065,261 +5676,6 @@ void SerialCli::executeLine(char* line, uint32_t nowMs) {
       return;
     }
     printUsageWithHint("i2c_scan [status]", "i2c");
-    return;
-  }
-
-  // Control and platform service commands.
-  if (strcmp(tokens[0], "outputs") == 0) {
-    if (argc == 1) {
-      printDevice("outputs");
-      return;
-    }
-    if (argc == 2 && strcmp(tokens[1], "status") == 0) {
-      printDevice("outputs");
-      return;
-    }
-    if (argc == 2 && strcmp(tokens[1], "state") == 0) {
-      printOutputState();
-      return;
-    }
-    if (argc == 2 && strcmp(tokens[1], "settings") == 0) {
-      printSettings("outputs");
-      return;
-    }
-    if (argc == 2 && strcmp(tokens[1], "mode") == 0) {
-      const OutputOverrideMode mode = _app.getOutputOverrideMode();
-      Serial.printf("  %s%-28s%s %s\n", CLI_ANSI_INFO, "Override mode", CLI_ANSI_RESET, overrideModeToStr(mode));
-      return;
-    }
-    if (argc == 2 && strcmp(tokens[1], "enabled") == 0) {
-      RuntimeSettings settings{};
-      if (!loadSettingsSnapshot(settings)) {
-        return;
-      }
-      Serial.printf("  %s%-28s%s %s\n", CLI_ANSI_INFO, "Enabled", CLI_ANSI_RESET, settings.outputsEnabled ? "on" : "off");
-      return;
-    }
-    if (argc == 2 && strcmp(tokens[1], "on_ppm") == 0) {
-      RuntimeSettings settings{};
-      if (!loadSettingsSnapshot(settings)) {
-        return;
-      }
-      Serial.printf("  %s%-28s%s %.2f ppm\n", CLI_ANSI_INFO, "CO2 ON threshold", CLI_ANSI_RESET, static_cast<double>(settings.co2OnPpm));
-      return;
-    }
-    if (argc == 2 && strcmp(tokens[1], "off_ppm") == 0) {
-      RuntimeSettings settings{};
-      if (!loadSettingsSnapshot(settings)) {
-        return;
-      }
-      Serial.printf("  %s%-28s%s %.2f ppm\n", CLI_ANSI_INFO, "CO2 OFF threshold", CLI_ANSI_RESET, static_cast<double>(settings.co2OffPpm));
-      return;
-    }
-    if (argc == 2 && strcmp(tokens[1], "on_temp") == 0) {
-      RuntimeSettings settings{};
-      if (!loadSettingsSnapshot(settings)) {
-        return;
-      }
-      Serial.printf("  %s%-28s%s %.2f C\n", CLI_ANSI_INFO, "Temp ON threshold", CLI_ANSI_RESET, static_cast<double>(settings.tempOnC));
-      return;
-    }
-    if (argc == 2 && strcmp(tokens[1], "off_temp") == 0) {
-      RuntimeSettings settings{};
-      if (!loadSettingsSnapshot(settings)) {
-        return;
-      }
-      Serial.printf("  %s%-28s%s %.2f C\n", CLI_ANSI_INFO, "Temp OFF threshold", CLI_ANSI_RESET, static_cast<double>(settings.tempOffC));
-      return;
-    }
-    if (argc == 2 && strcmp(tokens[1], "source") == 0) {
-      RuntimeSettings settings{};
-      if (!loadSettingsSnapshot(settings)) {
-        return;
-      }
-      Serial.printf("  %s%-28s%s %s\n", CLI_ANSI_INFO, "Source", CLI_ANSI_RESET,
-                    cliOutputSourceToStr(settings.outputSource));
-      return;
-    }
-    if (argc == 2 && strcmp(tokens[1], "on_rh") == 0) {
-      RuntimeSettings settings{};
-      if (!loadSettingsSnapshot(settings)) {
-        return;
-      }
-      Serial.printf("  %s%-28s%s %.2f %%\n", CLI_ANSI_INFO, "Humidity ON threshold", CLI_ANSI_RESET, static_cast<double>(settings.rhOnPct));
-      return;
-    }
-    if (argc == 2 && strcmp(tokens[1], "off_rh") == 0) {
-      RuntimeSettings settings{};
-      if (!loadSettingsSnapshot(settings)) {
-        return;
-      }
-      Serial.printf("  %s%-28s%s %.2f %%\n", CLI_ANSI_INFO, "Humidity OFF threshold", CLI_ANSI_RESET, static_cast<double>(settings.rhOffPct));
-      return;
-    }
-    if (argc == 2 && strcmp(tokens[1], "fan_period") == 0) {
-      RuntimeSettings settings{};
-      if (!loadSettingsSnapshot(settings)) {
-        return;
-      }
-      Serial.printf("  %s%-28s%s %lu ms\n", CLI_ANSI_INFO, "Fan interval period", CLI_ANSI_RESET,
-                    static_cast<unsigned long>(settings.outputFanPeriodMs));
-      return;
-    }
-    if (argc == 2 && strcmp(tokens[1], "fan_on") == 0) {
-      RuntimeSettings settings{};
-      if (!loadSettingsSnapshot(settings)) {
-        return;
-      }
-      Serial.printf("  %s%-28s%s %lu ms\n", CLI_ANSI_INFO, "Fan interval ON window", CLI_ANSI_RESET,
-                    static_cast<unsigned long>(settings.outputFanOnMs));
-      return;
-    }
-    if (argc == 2 && strcmp(tokens[1], "min_on") == 0) {
-      RuntimeSettings settings{};
-      if (!loadSettingsSnapshot(settings)) {
-        return;
-      }
-      Serial.printf("  %s%-28s%s %lu ms\n", CLI_ANSI_INFO, "Min ON time", CLI_ANSI_RESET, static_cast<unsigned long>(settings.minOnMs));
-      return;
-    }
-    if (argc == 2 && strcmp(tokens[1], "min_off") == 0) {
-      RuntimeSettings settings{};
-      if (!loadSettingsSnapshot(settings)) {
-        return;
-      }
-      Serial.printf("  %s%-28s%s %lu ms\n", CLI_ANSI_INFO, "Min OFF time", CLI_ANSI_RESET, static_cast<unsigned long>(settings.minOffMs));
-      return;
-    }
-    if (argc == 2 && strcmp(tokens[1], "stale") == 0) {
-      RuntimeSettings settings{};
-      if (!loadSettingsSnapshot(settings)) {
-        return;
-      }
-      Serial.printf("  %s%-28s%s %lu ms\n", CLI_ANSI_INFO, "Data stale min", CLI_ANSI_RESET, static_cast<unsigned long>(settings.outputDataStaleMinMs));
-      return;
-    }
-    if (argc == 3 && strcmp(tokens[1], "mode") == 0) {
-      queueOutputMode(tokens[2]);
-      return;
-    }
-    if ((argc == 3 || argc == 4) && strcmp(tokens[1], "enabled") == 0) {
-      bool persist = false;
-      if (argc == 4 && !parseBoolToken(tokens[3], persist)) {
-        Serial.println("ERR persist must be bool");
-        return;
-      }
-      (void)queueGroupedSetting("outputs", "enabled", tokens[2], persist);
-      return;
-    }
-    if ((argc == 3 || argc == 4) && strcmp(tokens[1], "on_ppm") == 0) {
-      bool persist = false;
-      if (argc == 4 && !parseBoolToken(tokens[3], persist)) {
-        Serial.println("ERR persist must be bool");
-        return;
-      }
-      (void)queueGroupedSetting("outputs", "on_ppm", tokens[2], persist);
-      return;
-    }
-    if ((argc == 3 || argc == 4) && strcmp(tokens[1], "off_ppm") == 0) {
-      bool persist = false;
-      if (argc == 4 && !parseBoolToken(tokens[3], persist)) {
-        Serial.println("ERR persist must be bool");
-        return;
-      }
-      (void)queueGroupedSetting("outputs", "off_ppm", tokens[2], persist);
-      return;
-    }
-    if ((argc == 3 || argc == 4) && strcmp(tokens[1], "on_temp") == 0) {
-      bool persist = false;
-      if (argc == 4 && !parseBoolToken(tokens[3], persist)) {
-        Serial.println("ERR persist must be bool");
-        return;
-      }
-      (void)queueGroupedSetting("outputs", "on_temp", tokens[2], persist);
-      return;
-    }
-    if ((argc == 3 || argc == 4) && strcmp(tokens[1], "off_temp") == 0) {
-      bool persist = false;
-      if (argc == 4 && !parseBoolToken(tokens[3], persist)) {
-        Serial.println("ERR persist must be bool");
-        return;
-      }
-      (void)queueGroupedSetting("outputs", "off_temp", tokens[2], persist);
-      return;
-    }
-    if ((argc == 3 || argc == 4) && strcmp(tokens[1], "on_rh") == 0) {
-      bool persist = false;
-      if (argc == 4 && !parseBoolToken(tokens[3], persist)) {
-        Serial.println("ERR persist must be bool");
-        return;
-      }
-      (void)queueGroupedSetting("outputs", "on_rh", tokens[2], persist);
-      return;
-    }
-    if ((argc == 3 || argc == 4) && strcmp(tokens[1], "off_rh") == 0) {
-      bool persist = false;
-      if (argc == 4 && !parseBoolToken(tokens[3], persist)) {
-        Serial.println("ERR persist must be bool");
-        return;
-      }
-      (void)queueGroupedSetting("outputs", "off_rh", tokens[2], persist);
-      return;
-    }
-    if ((argc == 3 || argc == 4) && strcmp(tokens[1], "source") == 0) {
-      bool persist = false;
-      if (argc == 4 && !parseBoolToken(tokens[3], persist)) {
-        Serial.println("ERR persist must be bool");
-        return;
-      }
-      (void)queueGroupedSetting("outputs", "source", tokens[2], persist);
-      return;
-    }
-    if ((argc == 3 || argc == 4) && strcmp(tokens[1], "fan_period") == 0) {
-      bool persist = false;
-      if (argc == 4 && !parseBoolToken(tokens[3], persist)) {
-        Serial.println("ERR persist must be bool");
-        return;
-      }
-      (void)queueGroupedSetting("outputs", "fan_period_ms", tokens[2], persist);
-      return;
-    }
-    if ((argc == 3 || argc == 4) && strcmp(tokens[1], "fan_on") == 0) {
-      bool persist = false;
-      if (argc == 4 && !parseBoolToken(tokens[3], persist)) {
-        Serial.println("ERR persist must be bool");
-        return;
-      }
-      (void)queueGroupedSetting("outputs", "fan_on_ms", tokens[2], persist);
-      return;
-    }
-    if ((argc == 3 || argc == 4) && strcmp(tokens[1], "min_on") == 0) {
-      bool persist = false;
-      if (argc == 4 && !parseBoolToken(tokens[3], persist)) {
-        Serial.println("ERR persist must be bool");
-        return;
-      }
-      (void)queueGroupedSetting("outputs", "min_on_ms", tokens[2], persist);
-      return;
-    }
-    if ((argc == 3 || argc == 4) && strcmp(tokens[1], "min_off") == 0) {
-      bool persist = false;
-      if (argc == 4 && !parseBoolToken(tokens[3], persist)) {
-        Serial.println("ERR persist must be bool");
-        return;
-      }
-      (void)queueGroupedSetting("outputs", "min_off_ms", tokens[2], persist);
-      return;
-    }
-    if ((argc == 3 || argc == 4) && strcmp(tokens[1], "stale") == 0) {
-      bool persist = false;
-      if (argc == 4 && !parseBoolToken(tokens[3], persist)) {
-        Serial.println("ERR persist must be bool");
-        return;
-      }
-      (void)queueGroupedSetting("outputs", "data_stale_min_ms", tokens[2], persist);
-      return;
-    }
-    printUsageWithHint("outputs <status|state|settings|mode|enabled|source|on_ppm|off_ppm|on_temp|off_temp|on_rh|off_rh|fan_period|fan_on|min_on|min_off|stale>", "outputs");
     return;
   }
 
@@ -6468,9 +5824,7 @@ void SerialCli::executeLine(char* line, uint32_t nowMs) {
       if (!loadSettingsSnapshot(settings)) {
         return;
       }
-      Serial.printf("system verbosity=%s (%u)\n",
-                    cliVerbosityToStr(settings.cliVerbosity),
-                    static_cast<unsigned int>(settings.cliVerbosity));
+      Serial.printf("system verbosity=%s\n", cliVerbosityToStr(settings.cliVerbosity));
       return;
     }
     if (argc == 2 && strcmp(tokens[1], "command_drain") == 0) {

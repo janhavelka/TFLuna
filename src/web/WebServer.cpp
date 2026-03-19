@@ -92,6 +92,36 @@ static constexpr uint32_t kApRestartGuardMs = 5000U;
 static constexpr uint32_t kWsCleanupIntervalMs = 2000U;
 static constexpr size_t kDeviceActionBodyMaxBytes = 256U;
 
+bool parseCliVerbosityValue(JsonVariantConst value, uint8_t& out) {
+  if (value.is<const char*>()) {
+    const char* token = value.as<const char*>();
+    if (token == nullptr) {
+      return false;
+    }
+    if (strcmp(token, "off") == 0 || strcmp(token, "compact") == 0) {
+      out = 0U;
+      return true;
+    }
+    if (strcmp(token, "normal") == 0) {
+      out = 1U;
+      return true;
+    }
+    if (strcmp(token, "verbose") == 0) {
+      out = 2U;
+      return true;
+    }
+    return false;
+  }
+
+  const uint8_t numeric = value.as<uint8_t>();
+  if (numeric < RuntimeSettings::MIN_CLI_VERBOSITY ||
+      numeric > RuntimeSettings::MAX_CLI_VERBOSITY) {
+    return false;
+  }
+  out = numeric;
+  return true;
+}
+
 AsyncWebSocketSharedBuffer makeWsSharedBuffer(const char* payload, size_t len) {
   if (payload == nullptr || len == 0U) {
     return AsyncWebSocketSharedBuffer{};
@@ -1030,66 +1060,6 @@ Status WebServer::setupHandlers() {
     (void)appendRequestBodyChunk(request, data, len, index, total, kDeviceActionBodyMaxBytes);
   });
 
-  _impl->server.on("/api/output/test", HTTP_POST, [this](AsyncWebServerRequest* request) {
-    if (_app == nullptr) {
-      request->send(503, "text/plain", "App not ready");
-      return;
-    }
-    const String body = extractRequestBody(request);
-    if (body.isEmpty()) {
-      request->send(400, "text/plain", "Missing body");
-      return;
-    }
-    StaticJsonDocument<256> doc;
-    const DeserializationError err = deserializeJson(doc, body);
-    if (err) {
-      request->send(400, "text/plain", "Invalid JSON");
-      return;
-    }
-    if (!doc.containsKey("channel")) {
-      request->send(400, "text/plain", "Missing channel");
-      return;
-    }
-    if (!doc.containsKey("state")) {
-      request->send(400, "text/plain", "Missing state");
-      return;
-    }
-
-    const int32_t channel = doc["channel"].as<int32_t>();
-    if (channel < 0 || channel >= static_cast<int32_t>(HardwareSettings::OUTPUT_CHANNEL_COUNT)) {
-      request->send(400, "text/plain", "Invalid channel");
-      return;
-    }
-    const bool enabled = doc.containsKey("enabled") ? doc["enabled"].as<bool>() : true;
-    const bool state = doc["state"].as<bool>();
-    const Status st = _app->enqueueSetOutputChannelTest(static_cast<size_t>(channel), enabled, state);
-    if (!st.ok()) {
-      if (st.code == Err::RESOURCE_BUSY) {
-        request->send(503, "text/plain", st.msg);
-      } else {
-        request->send(400, "text/plain", st.msg);
-      }
-      return;
-    }
-
-    StaticJsonDocument<192> res;
-    res["queued"] = true;
-    res["channel"] = static_cast<uint32_t>(channel);
-    res["enabled"] = enabled;
-    res["state"] = state;
-    res["queued_ms"] = millis();
-    AsyncResponseStream* response = request->beginResponseStream("application/json");
-    if (response == nullptr) {
-      request->send(503, "text/plain", "Response alloc failed");
-      return;
-    }
-    serializeJson(res, *response);
-    addNoStoreHeaders(response);
-    request->send(response);
-  }, nullptr, [](AsyncWebServerRequest* request, uint8_t* data, size_t len, size_t index, size_t total) {
-    (void)appendRequestBodyChunk(request, data, len, index, total, kDeviceActionBodyMaxBytes);
-  });
-
   _impl->server.on("/api/settings", HTTP_GET, [this](AsyncWebServerRequest* request) {
     if (_app == nullptr) {
       request->send(503, "text/plain", "App not ready");
@@ -1290,7 +1260,12 @@ Status WebServer::setupHandlers() {
       updated.serialPrintIntervalMs = doc["serial_print_interval_ms"].as<uint32_t>();
     }
     if (doc.containsKey("cli_verbosity")) {
-      updated.cliVerbosity = doc["cli_verbosity"].as<uint8_t>();
+      uint8_t cliVerbosity = updated.cliVerbosity;
+      if (!parseCliVerbosityValue(doc["cli_verbosity"].as<JsonVariantConst>(), cliVerbosity)) {
+        request->send(400, "text/plain", "Invalid cli_verbosity");
+        return;
+      }
+      updated.cliVerbosity = cliVerbosity;
     }
     if (doc.containsKey("i2c_freq_hz")) {
       updated.i2cFreqHz = doc["i2c_freq_hz"].as<uint32_t>();
@@ -1500,53 +1475,6 @@ Status WebServer::setupHandlers() {
       strncpy(updated.apPass, pass ? pass : "", sizeof(updated.apPass) - 1);
       updated.apPass[sizeof(updated.apPass) - 1] = '\0';
     }
-    if (doc.containsKey("co2_on_ppm")) {
-      updated.co2OnPpm = doc["co2_on_ppm"].as<float>();
-    }
-    if (doc.containsKey("co2_off_ppm")) {
-      updated.co2OffPpm = doc["co2_off_ppm"].as<float>();
-    }
-    if (doc.containsKey("temp_on_c")) {
-      updated.tempOnC = doc["temp_on_c"].as<float>();
-    }
-    if (doc.containsKey("temp_off_c")) {
-      updated.tempOffC = doc["temp_off_c"].as<float>();
-    }
-    if (doc.containsKey("rh_on_pct")) {
-      updated.rhOnPct = doc["rh_on_pct"].as<float>();
-    }
-    if (doc.containsKey("rh_off_pct")) {
-      updated.rhOffPct = doc["rh_off_pct"].as<float>();
-    }
-    if (doc.containsKey("output_source")) {
-      updated.outputSource = doc["output_source"].as<uint8_t>();
-    }
-    const bool updatesOutputValveChannel = doc.containsKey("output_valve_channel");
-    const bool updatesOutputFanChannel = doc.containsKey("output_fan_channel");
-    if (updatesOutputValveChannel) {
-      updated.outputValveChannel = doc["output_valve_channel"].as<uint8_t>();
-    }
-    if (doc.containsKey("output_valve_powered_closes")) {
-      updated.outputValvePoweredClosed = doc["output_valve_powered_closes"].as<bool>();
-    }
-    if (updatesOutputFanChannel) {
-      updated.outputFanChannel = doc["output_fan_channel"].as<uint8_t>();
-    }
-    if (doc.containsKey("output_fan_pwm_percent")) {
-      updated.outputFanPwmPercent = doc["output_fan_pwm_percent"].as<uint8_t>();
-    }
-    if (doc.containsKey("output_fan_period_ms")) {
-      updated.outputFanPeriodMs = doc["output_fan_period_ms"].as<uint32_t>();
-    }
-    if (doc.containsKey("output_fan_on_ms")) {
-      updated.outputFanOnMs = doc["output_fan_on_ms"].as<uint32_t>();
-    }
-    if (doc.containsKey("min_on_ms")) {
-      updated.minOnMs = doc["min_on_ms"].as<uint32_t>();
-    }
-    if (doc.containsKey("min_off_ms")) {
-      updated.minOffMs = doc["min_off_ms"].as<uint32_t>();
-    }
     if (doc.containsKey("command_drain_per_tick")) {
       updated.commandDrainPerTick = doc["command_drain_per_tick"].as<uint8_t>();
     }
@@ -1556,9 +1484,6 @@ Status WebServer::setupHandlers() {
     if (doc.containsKey("command_queue_degraded_depth_threshold")) {
       updated.commandQueueDegradedDepthThreshold =
           doc["command_queue_degraded_depth_threshold"].as<uint8_t>();
-    }
-    if (doc.containsKey("output_data_stale_min_ms")) {
-      updated.outputDataStaleMinMs = doc["output_data_stale_min_ms"].as<uint32_t>();
     }
     if (doc.containsKey("main_tick_slow_threshold_us")) {
       updated.mainTickSlowThresholdUs = doc["main_tick_slow_threshold_us"].as<uint32_t>();
@@ -1587,40 +1512,8 @@ Status WebServer::setupHandlers() {
     if (doc.containsKey("web_max_rtc_body_bytes")) {
       updated.webMaxRtcBodyBytes = doc["web_max_rtc_body_bytes"].as<uint16_t>();
     }
-    if (doc.containsKey("outputs_enabled")) {
-      updated.outputsEnabled = doc["outputs_enabled"].as<bool>();
-    }
     if (doc.containsKey("ap_auto_off_ms")) {
       updated.apAutoOffMs = doc["ap_auto_off_ms"].as<uint32_t>();
-    }
-
-    const auto validOutputChannel = [](uint8_t channel) -> bool {
-      return channel == RuntimeSettings::OUTPUT_CHANNEL_DISABLED ||
-             channel <= RuntimeSettings::MAX_OUTPUT_CHANNEL_INDEX;
-    };
-    if (!validOutputChannel(updated.outputValveChannel)) {
-      request->send(400, "text/plain", "outputValveChannel out of range");
-      return;
-    }
-    if (!validOutputChannel(updated.outputFanChannel)) {
-      request->send(400, "text/plain", "outputFanChannel out of range");
-      return;
-    }
-    bool autoDisabledLegacyFanChannelConflict = false;
-    if (updated.outputValveChannel != RuntimeSettings::OUTPUT_CHANNEL_DISABLED &&
-        updated.outputFanChannel != RuntimeSettings::OUTPUT_CHANNEL_DISABLED &&
-        updated.outputValveChannel == updated.outputFanChannel) {
-      // Backward compatibility: older persisted settings could legally hold
-      // identical channels. Keep strict validation for explicit channel edits,
-      // but auto-heal legacy conflicts for unrelated updates by disabling
-      // the fan channel. The auto-heal is reported in the change hint
-      // ("output_fan_channel") so the event log records the side-effect.
-      if (updatesOutputValveChannel || updatesOutputFanChannel) {
-        request->send(400, "text/plain", "output valve/fan channels must differ");
-        return;
-      }
-      updated.outputFanChannel = RuntimeSettings::OUTPUT_CHANNEL_DISABLED;
-      autoDisabledLegacyFanChannelConflict = true;
     }
 
     String changeHint;
@@ -1670,10 +1563,6 @@ Status WebServer::setupHandlers() {
       }
       appendHintKey(key);
     }
-    if (autoDisabledLegacyFanChannelConflict) {
-      appendHintKey("output_fan_channel");
-    }
-
     const Status st = _app->enqueueApplySettings(updated,
                                                  persist,
                                                  hasAnyHintKey ? changeHint.c_str() : nullptr);

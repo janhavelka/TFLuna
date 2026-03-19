@@ -27,9 +27,6 @@ using I2cPowerCycleHook = Status (*)(uint32_t nowMs, void* userContext);
  * Application-level board defaults are typically loaded from src/config/AppConfig.cpp.
  */
 struct HardwareSettings {
-  /// @brief Number of output channels exposed by OutputController.
-  static constexpr size_t OUTPUT_CHANNEL_COUNT = 4;
-
   /// @brief Build-time sample history capacity (ring buffer slots).
   static constexpr size_t SAMPLE_HISTORY_CAPACITY = 150;
   /// @brief PSRAM target sample history capacity (ring buffer slots).
@@ -260,31 +257,6 @@ struct HardwareSettings {
 
   /// @brief True when lower limit endstop is active-low.
   bool endstopLowerActiveLow = true;
-
-  /// @brief MOSFET output 1 pin. Set to -1 to disable.
-  int mosfet1Pin = -1;
-
-  /// @brief MOSFET output 2 pin. Set to -1 to disable.
-  int mosfet2Pin = -1;
-
-  /// @brief Relay output 1 pin. Set to -1 to disable.
-  int relay1Pin = -1;
-
-  /// @brief Relay output 2 pin. Set to -1 to disable.
-  int relay2Pin = -1;
-
-  /// @brief MOSFET output 1 active-high flag.
-  bool mosfet1ActiveHigh = true;
-
-  /// @brief MOSFET output 2 active-high flag.
-  bool mosfet2ActiveHigh = true;
-
-  /// @brief Relay output 1 active-high flag.
-  bool relay1ActiveHigh = true;
-
-  /// @brief Relay output 2 active-high flag.
-  bool relay2ActiveHigh = true;
-
 };
 
 }  // namespace TFLunaControl

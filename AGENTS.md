@@ -18,11 +18,11 @@ These rules are binding.
 
 ## Hardware Overview (TFLuna)
 - MCU: ESP32-S2 (N4R2)
-- SPI: SD card for logging
+- SPI: SD card for optional logging
 - I2C: ENV sensor (BME280 or SHT31 one-shot), RTC
 - E2 bus: EE871 CO2 sensor
 - RS485: present, currently stubbed
-- Outputs: 2 MOSFET + 2 relay channels
+- Endstops: upper and lower limit inputs (default GPIO5 / GPIO6)
 - Status LEDs: WS2812 strip with WiFi and health indicators
 - Button: SoftAP control and multi-press reset
 
@@ -152,9 +152,16 @@ Recovery behavior:
 ## Logging Rules
 - Library code (`src/`) does not use Serial logging.
 - SD logging is queue-based and fault-tolerant.
+- Default runtime settings keep SD logging off until the user explicitly enables it.
 - `Settings.logFlushMs` is an explicit flush-attempt gate for queued writes.
 - Event logging is mandatory for critical transitions (boot, settings, remount, I2C recovery, logger drops/errors).
 - Event persistence is bounded (`events.csv` rollover) and retrieval must stay bounded (`/api/events?count=N`).
+
+---
+
+## Web Surface Rules
+- Low-level I2C tuning remains CLI-only.
+- Web handlers expose operational actions and bounded settings updates, not direct hardware-driver control.
 
 ---
 

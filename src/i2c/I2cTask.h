@@ -303,9 +303,6 @@ class I2cTask : public II2cRequestPort {
   bool _displayCo2Valid = false;
   float _displayCo2Ppm = 0.0f;
   uint32_t _displayCo2SampleMs = 0;
-  uint8_t _displayOutputMask = 0;
-  OutputOverrideMode _displayOutputMode = OutputOverrideMode::AUTO;
-  bool _displayOutputsEnabled = false;
   bool _displayLogEnabled = false;
   bool _displayLogMounted = false;
   bool _displayLogHealthy = false;

@@ -423,20 +423,6 @@ void populateStatusJson(JsonDocument& doc, const SystemStatus& sys, const Sample
   doc["endstop_lower_raw_high"] = sys.endstopLowerRawHigh;
   doc["endstop_lower_triggered"] = sys.endstopLowerTriggered;
   doc["endstop_lower_last_change_ms"] = sys.endstopLowerLastChangeMs;
-  doc["output_present_mask"] = sys.outputPresentMask;
-  doc["output_channel_mask"] = sys.outputChannelMask;
-  doc["output_override_mode"] = sys.outputOverrideMode;
-  doc["outputs_enabled"] = sys.outputsEnabled;
-  doc["output_logic_state"] = sys.outputLogicState;
-  doc["output_valve_channel"] = sys.outputValveChannel;
-  doc["output_valve_powered_closes"] = sys.outputValvePoweredCloses;
-  doc["output_valve_state"] = sys.outputValveState;
-  doc["output_fan_channel"] = sys.outputFanChannel;
-  doc["output_fan_state"] = sys.outputFanState;
-  doc["output_fan_pwm_percent"] = sys.outputFanPwmPercent;
-  doc["output_test_active_mask"] = sys.outputTestActiveMask;
-  doc["output_test_state_mask"] = sys.outputTestStateMask;
-  doc["output_last_change_ms"] = sys.outputLastChangeMs;
   doc["fw_version"] = sys.fwVersion;
   doc["fw_version_full"] = VERSION_FULL;
   doc["build_timestamp"] = BUILD_TIMESTAMP;
@@ -579,20 +565,6 @@ void populateLiveStatusJson(JsonDocument& doc, const SystemStatus& sys, const Sa
   doc["endstop_lower_raw_high"] = sys.endstopLowerRawHigh;
   doc["endstop_lower_triggered"] = sys.endstopLowerTriggered;
   doc["endstop_lower_last_change_ms"] = sys.endstopLowerLastChangeMs;
-  doc["output_present_mask"] = sys.outputPresentMask;
-  doc["output_channel_mask"] = sys.outputChannelMask;
-  doc["output_override_mode"] = sys.outputOverrideMode;
-  doc["outputs_enabled"] = sys.outputsEnabled;
-  doc["output_logic_state"] = sys.outputLogicState;
-  doc["output_valve_channel"] = sys.outputValveChannel;
-  doc["output_valve_powered_closes"] = sys.outputValvePoweredCloses;
-  doc["output_valve_state"] = sys.outputValveState;
-  doc["output_fan_channel"] = sys.outputFanChannel;
-  doc["output_fan_state"] = sys.outputFanState;
-  doc["output_fan_pwm_percent"] = sys.outputFanPwmPercent;
-  doc["output_test_active_mask"] = sys.outputTestActiveMask;
-  doc["output_test_state_mask"] = sys.outputTestStateMask;
-  doc["output_last_change_ms"] = sys.outputLastChangeMs;
 
   if (sample) {
     setU16OrNull(doc, "distance_cm", sample->distanceCm, sample->validFrame);

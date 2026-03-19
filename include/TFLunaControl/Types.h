@@ -19,7 +19,6 @@ enum class DeviceId : uint8_t {
   RTC,
   LIDAR,
   CO2 = LIDAR,
-  OUTPUTS,
   WIFI,
   WEB,
   LEDS,
@@ -36,20 +35,6 @@ enum SampleValidMask : uint8_t {
   VALID_TEMP = 1 << 1,
   VALID_RH = 1 << 2,
   VALID_PRESSURE = 1 << 3
-};
-
-/// @brief Output control override mode.
-enum class OutputOverrideMode : uint8_t {
-  AUTO = 0,
-  FORCE_OFF,
-  FORCE_ON
-};
-
-/// @brief Output control input source.
-enum class OutputSource : uint8_t {
-  CO2  = 0,  ///< Control based on CO2 ppm readings.
-  TEMP = 1,  ///< Control based on temperature readings.
-  RH   = 2   ///< Control based on relative humidity readings.
 };
 
 /**

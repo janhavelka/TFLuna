@@ -27,7 +27,6 @@ class SerialCli {
   void printSettings(const char* section);
   void printBootConfig(const char* which);
   void printSettableKeys(const char* group);
-  void printOutputState();
   void printSdInfo();
   void printSdList(const char* path);
   void printDiagnostics(const char* scope);

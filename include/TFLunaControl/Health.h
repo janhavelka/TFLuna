@@ -199,21 +199,6 @@ struct SystemStatus {
   bool endstopLowerTriggered = false;         ///< Lower limit interpreted trigger state
   uint32_t endstopLowerLastChangeMs = 0;      ///< Timestamp of last lower limit state change
 
-  // --- Output state ---
-  uint8_t outputPresentMask = 0;              ///< Bitmask of physically configured output channels
-  uint8_t outputChannelMask = 0;              ///< Bitmask of active output channels
-  uint8_t outputOverrideMode = 0;             ///< OutputOverrideMode enum value (0=AUTO,1=OFF,2=ON)
-  bool outputsEnabled = false;                ///< True when outputs are enabled in settings
-  bool outputLogicState = false;              ///< Current hysteresis logic output state
-  uint8_t outputValveChannel = 0xFFU;         ///< Configured valve channel index (255=disabled)
-  bool outputValvePoweredCloses = true;       ///< True when powered valve state semantically means "closed"
-  bool outputValveState = false;              ///< Current valve actuation state (powered/unpowered)
-  uint8_t outputFanChannel = 0xFFU;           ///< Configured fan channel index (255=disabled)
-  bool outputFanState = false;                ///< Current fan actuation state (on/off)
-  uint8_t outputFanPwmPercent = 0;            ///< Current effective fan PWM percent (0..100)
-  uint8_t outputTestActiveMask = 0;           ///< Bitmask of channels with active test override
-  uint8_t outputTestStateMask = 0;            ///< Bitmask of active test overrides requesting ON state
-  uint32_t outputLastChangeMs = 0;            ///< Timestamp of last output state change
   const char* fwVersion = "";                  ///< Firmware version string
 
   // --- System resource metrics ---

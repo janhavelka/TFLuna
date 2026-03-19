@@ -4,6 +4,23 @@
 
 namespace TFLunaControl {
 
+namespace {
+
+const char* cliVerbosityToStr(uint8_t level) {
+  switch (level) {
+    case 0:
+      return "off";
+    case 1:
+      return "normal";
+    case 2:
+      return "verbose";
+    default:
+      return "unknown";
+  }
+}
+
+}  // namespace
+
 void populateSettingsJson(JsonDocument& doc, const RuntimeSettings& s) {
   const bool hasPassword = strnlen(s.apPass, sizeof(s.apPass)) > 0;
 
@@ -24,6 +41,7 @@ void populateSettingsJson(JsonDocument& doc, const RuntimeSettings& s) {
   doc["lidar_frame_stale_ms"] = s.lidarFrameStaleMs;
   doc["serial_print_interval_ms"] = s.serialPrintIntervalMs;
   doc["cli_verbosity"] = s.cliVerbosity;
+  doc["cli_verbosity_name"] = cliVerbosityToStr(s.cliVerbosity);
 
   doc["i2c_freq_hz"] = s.i2cFreqHz;
   doc["i2c_op_timeout_ms"] = s.i2cOpTimeoutMs;
@@ -95,27 +113,10 @@ void populateSettingsJson(JsonDocument& doc, const RuntimeSettings& s) {
   doc["ap_pass_masked"] = hasPassword ? "********" : "";
   doc["ap_pass_update_mode"] = "write_only";
 
-  doc["co2_on_ppm"] = s.co2OnPpm;
-  doc["co2_off_ppm"] = s.co2OffPpm;
-  doc["temp_on_c"] = s.tempOnC;
-  doc["temp_off_c"] = s.tempOffC;
-  doc["rh_on_pct"] = s.rhOnPct;
-  doc["rh_off_pct"] = s.rhOffPct;
-  doc["min_on_ms"] = s.minOnMs;
-  doc["min_off_ms"] = s.minOffMs;
-  doc["outputs_enabled"] = s.outputsEnabled;
-  doc["output_source"] = s.outputSource;
-  doc["output_valve_channel"] = s.outputValveChannel;
-  doc["output_valve_powered_closes"] = s.outputValvePoweredClosed;
-  doc["output_fan_channel"] = s.outputFanChannel;
-  doc["output_fan_pwm_percent"] = s.outputFanPwmPercent;
-  doc["output_fan_period_ms"] = s.outputFanPeriodMs;
-  doc["output_fan_on_ms"] = s.outputFanOnMs;
   doc["ap_auto_off_ms"] = s.apAutoOffMs;
   doc["command_drain_per_tick"] = s.commandDrainPerTick;
   doc["command_queue_degraded_window_ms"] = s.commandQueueDegradedWindowMs;
   doc["command_queue_degraded_depth_threshold"] = s.commandQueueDegradedDepthThreshold;
-  doc["output_data_stale_min_ms"] = s.outputDataStaleMinMs;
   doc["main_tick_slow_threshold_us"] = s.mainTickSlowThresholdUs;
   doc["web_overrun_threshold_us"] = s.webOverrunThresholdUs;
   doc["web_overrun_burst_threshold"] = s.webOverrunBurstThreshold;

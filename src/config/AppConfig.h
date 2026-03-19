@@ -13,7 +13,6 @@ struct StartupProfileSettings {
   int quickProfileI2cSclPin = 9;
   int quickProfileLidarRxPin = 15;
   int quickProfileLidarTxPin = 14;
-  int quickProfileMosfet1Pin = -1;
 
   bool stressModeEnabled = false;
   uint32_t stressRtcIntervalMs = 250;

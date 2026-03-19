@@ -1,24 +1,26 @@
-# TF-Luna Stability Logger
+# TFLunaControl
 
-Focused ESP32-S3 measurement firmware for long-run TF-Luna stability logging.
+ESP32-S2/S3 TF-Luna measurement firmware with a deterministic app lifecycle,
+SSD1315 OLED status display, RV3032 RTC support, opt-in SD logging, SoftAP web
+UI, serial CLI diagnostics, and endstop inputs.
 
 ## Purpose
 
-This project keeps only the pieces needed for:
+This firmware is centered around stable TF-Luna acquisition and observability:
 
 - TF-Luna LiDAR over UART
-- SSD1315 OLED status display
-- SoftAP web status page
-- SD card CSV logging
+- SSD1315 OLED live status display
+- SoftAP web dashboard with overview, graphs, devices, endstops, logging, settings, and system tabs
+- SD card CSV and event logging
 - RV3032 RTC timestamps when available
+- Upper and lower limit inputs
 
-The target use case is unattended overnight logging so distance stability, spread,
-signal quality, and timestamp behavior can be checked later from the SD card.
+The main use case is unattended distance measurement with enough local telemetry
+to diagnose timing, signal quality, logging health, and time-source behavior.
 
-## Preserved Board Wiring
+## Default Board Wiring
 
-The existing repo wiring assumptions were preserved for the board resources that
-were already encoded in firmware:
+The default board mapping is defined in `src/config/AppConfig.cpp`.
 
 - I2C SDA: `GPIO8`
 - I2C SCL: `GPIO9`
@@ -26,37 +28,58 @@ were already encoded in firmware:
 - SD MOSI: `GPIO11`
 - SD SCK: `GPIO12`
 - SD MISO: `GPIO13`
+- TF-Luna `TX` -> ESP32 `RX` on `GPIO15`
+- TF-Luna `RX` -> ESP32 `TX` on `GPIO14`
+- Upper limit input: `GPIO5`
+- Lower limit input: `GPIO6`
 
-## TF-Luna UART Mapping
+Board-revision-specific S3 defaults are also prepared there:
 
-The old firmware did not define any `GPIO14/GPIO15` UART mapping, so the TF-Luna
-mapping is now explicit in `src/project_config.cpp` and `src/project_config.h`:
-
-- TF-Luna `TX` -> ESP32-S3 `RX` on `GPIO15`
-- TF-Luna `RX` -> ESP32-S3 `TX` on `GPIO14`
+- Button: `GPIO38`
+- Status LED: `GPIO47`
 
 ## Build
 
 ```bash
+pio run -e firmware_esp32s2
 pio run -e firmware_esp32s3
 ```
 
-## Runtime Output
+## Test
 
-- OLED shows live reading, validity, strength, counts, min/max, mean, stddev,
-  logging state, and RTC vs uptime source.
-- Web UI serves `/` and `/api/status` from the built-in SoftAP.
-- Serial prints a compact periodic status line.
-- SD logging writes CSV rows with:
-  - `timestamp`
-  - `time_source`
-  - `uptime_ms`
-  - `sample_index`
-  - `distance_cm`
-  - `strength`
-  - `temperature_c`
-  - `valid_frame`
-  - `signal_ok`
+```bash
+pio test -e native
+python tools/conformance_gates.py
+python scripts/check_text_integrity.py
+```
+
+The native test environment requires a host `gcc/g++` toolchain.
+
+## Runtime Behavior
+
+- OLED shows live distance, validity, strength, running distance stats, logging
+  state, and RTC vs uptime source.
+- Web UI serves `/` plus JSON APIs and keeps live status current over WebSocket.
+- SD logging is off by default after reset/restore defaults. The user starts
+  and stops logging explicitly from the Logging tab or CLI.
+- Low-level I2C tuning is CLI-only. The web UI is limited to operational
+  actions and non-I2C settings.
+- CLI verbosity uses named levels: `off`, `normal`, `verbose`.
+  Numeric `0..2` is still accepted for compatibility.
+
+## Logged Sample Fields
+
+Sample CSV rows include:
+
+- `timestamp`
+- `time_source`
+- `uptime_ms`
+- `sample_index`
+- `distance_cm`
+- `strength`
+- `temperature_c`
+- `valid_frame`
+- `signal_ok`
 
 ## Time Source Behavior
 

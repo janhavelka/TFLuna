@@ -31,31 +31,12 @@ namespace {
 #define TFLUNACTRL_STRESS_MODE 0
 #endif
 
-void driveOutputPinLow(int pin) {
-  if (pin < 0) {
-    return;
-  }
-  pinMode(static_cast<uint8_t>(pin), OUTPUT);
-  digitalWrite(static_cast<uint8_t>(pin), LOW);
-}
-
-void primeOutputsLow(const TFLunaControl::HardwareSettings& hw) {
-  // Ensure all configured output channels are electrically LOW as early as possible.
-  driveOutputPinLow(hw.mosfet1Pin);
-  driveOutputPinLow(hw.mosfet2Pin);
-  driveOutputPinLow(hw.relay1Pin);
-  driveOutputPinLow(hw.relay2Pin);
-}
-
 void applyQuickProfileHardware(TFLunaControl::HardwareSettings& hw,
                                const TFLunaControl::StartupProfileSettings& profile) {
   hw.i2cSda = profile.quickProfileI2cSdaPin;
   hw.i2cScl = profile.quickProfileI2cSclPin;
   hw.lidarRx = profile.quickProfileLidarRxPin;
   hw.lidarTx = profile.quickProfileLidarTxPin;
-  if (profile.quickProfileMosfet1Pin >= 0) {
-    hw.mosfet1Pin = profile.quickProfileMosfet1Pin;
-  }
 }
 
 TFLunaControl::Status applyQuickProfileSettings(TFLunaControl::TFLunaControl& app,
@@ -96,7 +77,6 @@ void tickStressMode(TFLunaControl::TFLunaControl& app,
     nextSettingsMs = nowMs + profile.stressSettingsIntervalMs;
     TFLunaControl::RuntimeSettings s = app.getSettings();
     flip = !flip;
-    s.outputsEnabled = flip;
     s.sampleIntervalMs = flip ? profile.stressSampleIntervalMsA : profile.stressSampleIntervalMsB;
     (void)app.enqueueApplySettings(s, false);
   }
@@ -175,7 +155,6 @@ void setup() {
   if (g_startupProfile.quickProfileEnabled) {
     applyQuickProfileHardware(g_hw, g_startupProfile);
   }
-  primeOutputsLow(g_hw);
   g_appSettings.enableSd = (g_hw.sdCs >= 0);
 
   // IDF 5.x task WDT safety net.  pioarduino initialises the TWDT at boot

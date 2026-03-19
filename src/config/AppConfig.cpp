@@ -9,10 +9,10 @@ HardwareSettings loadHardwareSettings() {
   // I2C bus (RTC + SSD1315 OLED): SDA=IO8, SCL=IO9
   // SPI bus (SD card): MOSI=IO11, SCK=IO12, MISO=IO13, CS=IO10
   //
-  // TF-Luna UART mapping is new for this measurement firmware and is kept
-  // explicit here instead of being inferred elsewhere:
-  //   TF-Luna TX -> ESP32-S3 RX on GPIO15
-  //   TF-Luna RX -> ESP32-S3 TX on GPIO14
+  // TF-Luna UART mapping is kept explicit here instead of being inferred
+  // elsewhere:
+  //   TF-Luna TX -> ESP32 RX on GPIO15
+  //   TF-Luna RX -> ESP32 TX on GPIO14
   settings.i2cSda = 8;
   settings.i2cScl = 9;
   settings.spiMosi = 11;

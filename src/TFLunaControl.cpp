@@ -12,7 +12,6 @@ namespace TFLunaControl { static constexpr const char* VERSION = "dev"; }
 #include <string.h>
 #include <new>
 
-#include "control/OutputController.h"
 #include "core/CommandQueue.h"
 #include "core/DynamicRingBuffer.h"
 #include "core/PsramSupport.h"
@@ -56,13 +55,11 @@ enum EventCode : uint16_t {
   EVENT_LOGGER_DROP = 7,
   EVENT_LOGGER_ERROR = 8,
   EVENT_FACTORY_RESET_FAILED = 9,
-  EVENT_OUTPUT_OVERRIDE = 10,
-  EVENT_I2C_RECOVERY_REQUESTED = 11,
-  EVENT_LIDAR_RECOVERY_REQUESTED = 12,
-  EVENT_OUTPUT_TEST = 13,
-  EVENT_ENV_HEALTH_CHANGE = 14,
-  EVENT_RTC_HEALTH_CHANGE = 15,
-  EVENT_LIDAR_STATS_RESET = 16
+  EVENT_I2C_RECOVERY_REQUESTED = 10,
+  EVENT_LIDAR_RECOVERY_REQUESTED = 11,
+  EVENT_ENV_HEALTH_CHANGE = 12,
+  EVENT_RTC_HEALTH_CHANGE = 13,
+  EVENT_LIDAR_STATS_RESET = 14
 };
 
 static constexpr uint32_t LOGGER_EVENT_THROTTLE_MS = 10000UL;
@@ -81,8 +78,6 @@ enum class AppCommandType : uint8_t {
   SET_WIFI_AP_ENABLED,
   SET_RTC_TIME,
   REMOUNT_SD,
-  SET_OUTPUT_OVERRIDE,
-  SET_OUTPUT_CHANNEL_TEST,
   RECOVER_I2C,
   RECOVER_LIDAR,
   PROBE_LIDAR,
@@ -98,10 +93,6 @@ struct AppCommand {
   char settingsChangeHint[sizeof(Event::msg)] = {0};
   bool apEnabled = false;
   RtcTime rtcTime{};
-  OutputOverrideMode outputOverride = OutputOverrideMode::AUTO;
-  uint8_t outputChannelIndex = 0;
-  bool outputChannelTestEnabled = false;
-  bool outputChannelState = false;
   I2cOpType i2cOp = I2cOpType::NONE;
   uint8_t i2cAddress = 0;
   uint8_t i2cTx[HardwareSettings::I2C_PAYLOAD_BYTES] = {0};
@@ -121,7 +112,6 @@ struct TFLunaControl::Impl {
   RtcAdapter rtc;
   I2cTask i2cTask;
   I2cOrchestrator i2cOrchestrator;
-  OutputController outputs;
   EndstopAdapter endstops;
   SdLogger sdLogger;
   SettingsStore settingsStore;
@@ -167,11 +157,8 @@ struct TFLunaControl::Impl {
   Status lastLogEnqueueStatus = Ok();
   Status wifiLastStatus = Ok();
   Status buttonLastStatus = Ok();
-  Status outputsLastStatus = Ok();
   bool buttonEnabled = false;
   bool lastSdMounted = false;
-  uint32_t lastValidCo2Ms = 0;
-  uint32_t lastValidEnvMs = 0;
   uint32_t lastI2cRecoveryCount = 0;
 
   // Cached heap / stack metrics ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â refreshed once per second to avoid
@@ -334,7 +321,7 @@ struct TFLunaControl::Impl {
 };
 
 static const char* kDeviceNames[DEVICE_COUNT] = {
-    "system", "i2c_bus", "sd", "env", "rtc", "lidar", "outputs", "wifi", "web", "leds", "button"};
+    "system", "i2c_bus", "sd", "env", "rtc", "lidar", "wifi", "web", "leds", "button"};
 
 static void updateDeviceStatus(DeviceStatus& ds, HealthState health, const Status& st, uint32_t nowMs) {
   ds.health = health;
@@ -589,11 +576,8 @@ Status TFLunaControl::begin(const HardwareSettings& config, const AppSettings& a
   _impl->lastLogEnqueueStatus = Ok();
   _impl->wifiLastStatus = Ok();
   _impl->buttonLastStatus = Ok();
-  _impl->outputsLastStatus = Ok();
   _impl->buttonEnabled = (_config.buttonPin >= 0);
   _impl->lastSdMounted = false;
-  _impl->lastValidCo2Ms = 0;
-  _impl->lastValidEnvMs = 0;
   _impl->lastI2cRecoveryCount = 0;
   _impl->lastI2cRecoveryStage = I2cRecoveryStage::NONE;
   _impl->lastLoggedDropCount = 0;
@@ -657,12 +641,6 @@ Status TFLunaControl::begin(const HardwareSettings& config, const AppSettings& a
 
   _impl->sampleTimer.setInterval(_settings.sampleIntervalMs);
 
-  const Status outputsBeginSt = _impl->outputs.begin(_config, _settings);
-  _impl->outputsLastStatus = outputsBeginSt;
-  updateDeviceStatus(_deviceStatus[static_cast<size_t>(DeviceId::OUTPUTS)],
-                     outputsBeginSt.ok() ? HealthState::OK : HealthState::FAULT,
-                     outputsBeginSt,
-                     0);
   (void)_impl->endstops.begin(_config);
 
   Status i2cTaskSt = _impl->i2cTask.begin(_config, _settings);
@@ -739,7 +717,6 @@ void TFLunaControl::end() {
 
   _impl->web.end();
   _impl->leds.end();
-  _impl->outputs.end();
   _impl->endstops.end();
   _impl->i2cOrchestrator.end();
   _impl->i2cTask.end();
@@ -841,25 +818,6 @@ void TFLunaControl::tick(uint32_t nowMs) {
       pushEvent(nowMs,
                 EVENT_SD_REMOUNT_RESULT,
                 commandStatus.ok() ? "sd remount queued" : "sd remount failed");
-    } else if (command.type == AppCommandType::SET_OUTPUT_OVERRIDE) {
-      _impl->outputs.setOverrideMode(command.outputOverride, nowMs);
-      commandStatus = Ok();
-      if (command.outputOverride == OutputOverrideMode::FORCE_ON) {
-        pushEvent(nowMs, EVENT_OUTPUT_OVERRIDE, "outputs override on");
-      } else if (command.outputOverride == OutputOverrideMode::FORCE_OFF) {
-        pushEvent(nowMs, EVENT_OUTPUT_OVERRIDE, "outputs override off");
-      } else {
-        pushEvent(nowMs, EVENT_OUTPUT_OVERRIDE, "outputs override auto");
-      }
-    } else if (command.type == AppCommandType::SET_OUTPUT_CHANNEL_TEST) {
-      commandStatus = _impl->outputs.setChannelTestOverride(command.outputChannelIndex,
-                                                            command.outputChannelTestEnabled,
-                                                            command.outputChannelState,
-                                                            nowMs);
-      if (commandStatus.ok()) {
-        pushEvent(nowMs, EVENT_OUTPUT_TEST, "output test updated");
-        _impl->leds.flashSuccess();
-      }
     } else if (command.type == AppCommandType::RECOVER_I2C) {
       pushEvent(nowMs, EVENT_I2C_RECOVERY_REQUESTED, "i2c recovery requested");
       commandStatus = _impl->i2cOrchestrator.queueBusRecover(nowMs);
@@ -994,18 +952,11 @@ void TFLunaControl::tick(uint32_t nowMs) {
     Status envSt = _impl->env.readOnce(sample, nowMs);
     tickPhaseI2cUs += (SystemClock::nowUs() - envPhaseStartUs);
     const HealthState envHealth = _impl->env.health();
-    if (((sample.validMask & VALID_TEMP) != 0U && isfinite(sample.tempC)) ||
-        ((sample.validMask & VALID_RH) != 0U && isfinite(sample.rhPct))) {
-      _impl->lastValidEnvMs = nowMs;
-    }
 
     const uint32_t co2PhaseStartUs = SystemClock::nowUs();
     Status co2St = _impl->lidar.readOnce(sample, nowMs);
     tickPhaseCo2Us += (SystemClock::nowUs() - co2PhaseStartUs);
     const HealthState co2Health = _impl->lidar.health();
-    if (sample.signalOk && sample.distanceCm > 0U) {
-      _impl->lastValidCo2Ms = nowMs;
-    }
 
     // Batch: update RTC/ENV/CO2 device status + push sample under one lock.
     if (_impl->lockState()) {
@@ -1073,16 +1024,6 @@ void TFLunaControl::tick(uint32_t nowMs) {
       latest->signalOk && (latest->distanceCm > 0U);
   _impl->i2cOrchestrator.setDisplayCo2Snapshot(
       static_cast<float>(latest->distanceCm), latestCo2Valid, _impl->lastSampleMs);
-  _impl->outputs.tick(*latest, nowMs);
-  const uint8_t outputPresentMask = _impl->outputs.presentMask();
-  uint8_t outputMask = 0;
-  for (size_t i = 0; i < HardwareSettings::OUTPUT_CHANNEL_COUNT && i < 8U; ++i) {
-    if (_impl->outputs.channelState(i)) {
-      outputMask = static_cast<uint8_t>(outputMask | (1U << i));
-    }
-  }
-  _impl->i2cOrchestrator.setDisplayOutputSnapshot(
-      outputMask, _impl->outputs.overrideMode(), tickSettings.outputsEnabled);
 
   if (_appSettings.enableWeb) {
     // Reset throttle when hold period expires.
@@ -1232,46 +1173,6 @@ void TFLunaControl::tick(uint32_t nowMs) {
         sdH = HealthState::OK;
         sdS = Ok();
       }
-    }
-  }
-
-  // Outputs
-  {
-    HealthState& oH = dsHealth[static_cast<size_t>(DeviceId::OUTPUTS)];
-    Status& oS = dsStatus[static_cast<size_t>(DeviceId::OUTPUTS)];
-    oS = _impl->outputsLastStatus;
-    if (!_impl->outputsLastStatus.ok()) {
-      oH = HealthState::FAULT;
-    } else if (tickSettings.outputsEnabled &&
-               tickSettings.outputValveChannel != RuntimeSettings::OUTPUT_CHANNEL_DISABLED) {
-      uint64_t staleWindow = static_cast<uint64_t>(tickSettings.sampleIntervalMs) * 2ULL;
-      if (staleWindow > 0xFFFFFFFFULL) {
-        staleWindow = 0xFFFFFFFFULL;
-      }
-      uint32_t staleWindowMs = static_cast<uint32_t>(staleWindow);
-      if (staleWindowMs < tickSettings.outputDataStaleMinMs) {
-        staleWindowMs = tickSettings.outputDataStaleMinMs;
-      }
-      const OutputSource source = static_cast<OutputSource>(tickSettings.outputSource);
-      const bool envSource = (source == OutputSource::TEMP || source == OutputSource::RH);
-      const uint32_t lastDataMs = envSource ? _impl->lastValidEnvMs : _impl->lastValidCo2Ms;
-      if (lastDataMs == 0 ||
-          static_cast<int32_t>(nowMs - lastDataMs) > static_cast<int32_t>(staleWindowMs)) {
-        oH = HealthState::DEGRADED;
-        const char* staleMsg = "LiDAR data stale";
-        if (source == OutputSource::TEMP) {
-          staleMsg = "Temp data stale";
-        } else if (source == OutputSource::RH) {
-          staleMsg = "Humidity data stale";
-        }
-        oS = Status(Err::COMM_FAILURE, 0, staleMsg);
-      } else {
-        oH = HealthState::OK;
-        oS = Ok();
-      }
-    } else {
-      oH = HealthState::OK;
-      oS = Ok();
     }
   }
 
@@ -1472,21 +1373,6 @@ void TFLunaControl::tick(uint32_t nowMs) {
   nextStatus.endstopLowerTriggered = endstops.lowerTriggered;
   nextStatus.endstopLowerLastChangeMs = endstops.lowerLastChangeMs;
 
-  // Output state
-  nextStatus.outputPresentMask = outputPresentMask;
-  nextStatus.outputChannelMask = outputMask;
-  nextStatus.outputOverrideMode = static_cast<uint8_t>(_impl->outputs.overrideMode());
-  nextStatus.outputsEnabled = tickSettings.outputsEnabled;
-  nextStatus.outputLogicState = _impl->outputs.valveState();
-  nextStatus.outputValveChannel = _impl->outputs.valveChannel();
-  nextStatus.outputValvePoweredCloses = _impl->outputs.valvePoweredCloses();
-  nextStatus.outputValveState = _impl->outputs.valveState();
-  nextStatus.outputFanChannel = _impl->outputs.fanChannel();
-  nextStatus.outputFanState = _impl->outputs.fanState();
-  nextStatus.outputFanPwmPercent = _impl->outputs.fanAppliedPercent();
-  nextStatus.outputTestActiveMask = _impl->outputs.testOverrideEnabledMask();
-  nextStatus.outputTestStateMask = _impl->outputs.testOverrideStateMask();
-  nextStatus.outputLastChangeMs = _impl->outputs.lastChangeMs();
   nextStatus.fwVersion = VERSION;
 
   nextStatus.uptimeMs = uptimeMs;
@@ -2052,7 +1938,6 @@ Status TFLunaControl::updateSettings(const RuntimeSettings& settings, bool persi
 
   _impl->sampleTimer.setInterval(normalized.sampleIntervalMs);
   _impl->sampleTimer.reset(_impl->lastNowMs);
-  _impl->outputs.applySettings(normalized);
   _impl->sdLogger.applySettings(normalized);
   _impl->i2cTask.applySettings(normalized, _impl->lastNowMs);
   _impl->i2cOrchestrator.applySettings(normalized);
@@ -2131,21 +2016,6 @@ static bool isValidI2cAddress7Bit(uint8_t address) {
   return address >= 0x01U && address <= 0x7FU;
 }
 
-static bool isOutputChannelConfigured(const HardwareSettings& config, size_t index) {
-  switch (index) {
-    case 0:
-      return config.mosfet1Pin >= 0;
-    case 1:
-      return config.mosfet2Pin >= 0;
-    case 2:
-      return config.relay1Pin >= 0;
-    case 3:
-      return config.relay2Pin >= 0;
-    default:
-      return false;
-  }
-}
-
 Status TFLunaControl::remountSd() {
   if (!_initialized) {
     return Status(Err::NOT_INITIALIZED, 0, "not initialized");
@@ -2220,46 +2090,6 @@ Status TFLunaControl::enqueueRemountSd() {
 
   AppCommand cmd;
   cmd.type = AppCommandType::REMOUNT_SD;
-  cmd.persist = false;
-
-  if (!_impl->enqueueCommand(cmd, currentMs())) {
-    return Status(Err::RESOURCE_BUSY, 0, "command queue full");
-  }
-  return Ok();
-}
-
-Status TFLunaControl::enqueueSetOutputOverride(OutputOverrideMode mode) {
-  if (!_initialized || !_impl) {
-    return Status(Err::NOT_INITIALIZED, 0, "not initialized");
-  }
-
-  AppCommand cmd;
-  cmd.type = AppCommandType::SET_OUTPUT_OVERRIDE;
-  cmd.outputOverride = mode;
-  cmd.persist = false;
-
-  if (!_impl->enqueueCommand(cmd, currentMs())) {
-    return Status(Err::RESOURCE_BUSY, 0, "command queue full");
-  }
-  return Ok();
-}
-
-Status TFLunaControl::enqueueSetOutputChannelTest(size_t index, bool enabled, bool state) {
-  if (!_initialized || !_impl) {
-    return Status(Err::NOT_INITIALIZED, 0, "not initialized");
-  }
-  if (index >= HardwareSettings::OUTPUT_CHANNEL_COUNT) {
-    return Status(Err::INVALID_CONFIG, 0, "output index out of range");
-  }
-  if (!isOutputChannelConfigured(_config, index)) {
-    return Status(Err::NOT_INITIALIZED, 0, "output channel not configured");
-  }
-
-  AppCommand cmd;
-  cmd.type = AppCommandType::SET_OUTPUT_CHANNEL_TEST;
-  cmd.outputChannelIndex = static_cast<uint8_t>(index);
-  cmd.outputChannelTestEnabled = enabled;
-  cmd.outputChannelState = state;
   cmd.persist = false;
 
   if (!_impl->enqueueCommand(cmd, currentMs())) {
@@ -2491,26 +2321,6 @@ bool TFLunaControl::tryGetRtcDebugSnapshot(RtcDebugSnapshot& out) const {
     return false;
   }
   out = _impl->i2cTask.getRtcDebugSnapshot();
-  _impl->unlockState();
-  return true;
-}
-
-OutputOverrideMode TFLunaControl::getOutputOverrideMode() const {
-  if (!_initialized || !_impl) {
-    return OutputOverrideMode::AUTO;
-  }
-  return _impl->outputs.overrideMode();
-}
-
-bool TFLunaControl::tryGetOutputChannelState(size_t index, bool& outState) const {
-  outState = false;
-  if (!_initialized || !_impl || index >= HardwareSettings::OUTPUT_CHANNEL_COUNT) {
-    return false;
-  }
-  if (!_impl->tryLockState()) {
-    return false;
-  }
-  outState = _impl->outputs.channelState(index);
   _impl->unlockState();
   return true;
 }

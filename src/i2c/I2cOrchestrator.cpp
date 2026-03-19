@@ -101,9 +101,6 @@ Status I2cOrchestrator::begin(const HardwareSettings& config,
   _displayCo2Valid = false;
   _displayCo2Ppm = 0.0f;
   _displayCo2SampleMs = 0;
-  _displayOutputMask = 0;
-  _displayOutputMode = OutputOverrideMode::AUTO;
-  _displayOutputsEnabled = false;
   _displayLoggingEnabled = false;
   _displaySdMounted = false;
   _displayLoggingHealthy = false;
@@ -136,9 +133,6 @@ void I2cOrchestrator::end() {
   _displayCo2Valid = false;
   _displayCo2Ppm = 0.0f;
   _displayCo2SampleMs = 0;
-  _displayOutputMask = 0;
-  _displayOutputMode = OutputOverrideMode::AUTO;
-  _displayOutputsEnabled = false;
   _displayLoggingEnabled = false;
   _displaySdMounted = false;
   _displayLoggingHealthy = false;
@@ -169,14 +163,6 @@ void I2cOrchestrator::setDisplayCo2Snapshot(float ppm, bool valid, uint32_t samp
   _displayCo2Valid = valid;
   _displayCo2Ppm = ppm;
   _displayCo2SampleMs = sampleMs;
-}
-
-void I2cOrchestrator::setDisplayOutputSnapshot(uint8_t channelMask,
-                                               OutputOverrideMode mode,
-                                               bool outputsEnabled) {
-  _displayOutputMask = static_cast<uint8_t>(channelMask & 0x0FU);
-  _displayOutputMode = mode;
-  _displayOutputsEnabled = outputsEnabled;
 }
 
 void I2cOrchestrator::setDisplaySystemSnapshot(bool loggingEnabled,
@@ -776,9 +762,6 @@ void I2cOrchestrator::scheduleRequests(uint32_t nowMs) {
     req.tx[0] = _displayCo2Valid ? 1U : 0U;
     memcpy(&req.tx[1], &co2X10, sizeof(co2X10));
     memcpy(&req.tx[5], &_displayLogSamplesWritten, sizeof(_displayLogSamplesWritten));
-    req.tx[9] = static_cast<uint8_t>(_displayOutputMask & 0x0FU);
-    req.tx[10] = static_cast<uint8_t>(_displayOutputMode);
-    req.tx[11] = _displayOutputsEnabled ? 1U : 0U;
     uint8_t logFlags = 0;
     if (_displayLoggingEnabled) {
       logFlags = static_cast<uint8_t>(logFlags | 0x01U);
@@ -789,9 +772,9 @@ void I2cOrchestrator::scheduleRequests(uint32_t nowMs) {
     if (_displayLoggingHealthy) {
       logFlags = static_cast<uint8_t>(logFlags | 0x04U);
     }
-    req.tx[12] = logFlags;
-    req.tx[13] = static_cast<uint8_t>(_displaySystemHealth);
-    req.txLen = 14;
+    req.tx[9] = logFlags;
+    req.tx[10] = static_cast<uint8_t>(_displaySystemHealth);
+    req.txLen = 11;
     uint32_t displayTimeoutMs = _settings.i2cOpTimeoutMs * 4U;
     if (displayTimeoutMs < _settings.i2cOpTimeoutMs) {
       displayTimeoutMs = _settings.i2cOpTimeoutMs;

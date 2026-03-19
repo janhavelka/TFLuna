@@ -156,18 +156,6 @@ class TFLunaControl {
   /// @return Ok if queued, RESOURCE_BUSY if queue full.
   Status enqueueRemountSd();
 
-  /// @brief Enqueue output override mode change.
-  /// @param mode Output override mode.
-  /// @return Ok if queued, RESOURCE_BUSY if queue full.
-  Status enqueueSetOutputOverride(OutputOverrideMode mode);
-
-  /// @brief Enqueue per-channel output test override update.
-  /// @param index Channel index (0..3).
-  /// @param enabled True to force channel state, false to return channel to auto logic.
-  /// @param state Forced state when enabled=true.
-  /// @return Ok if queued, RESOURCE_BUSY if queue full, INVALID_CONFIG on bad index.
-  Status enqueueSetOutputChannelTest(size_t index, bool enabled, bool state);
-
   /// @brief Enqueue explicit I2C bus recovery request.
   /// @return Ok if queued, RESOURCE_BUSY if queue full.
   Status enqueueRecoverI2cBus();
@@ -235,15 +223,6 @@ class TFLunaControl {
   /// @param out Snapshot output.
   /// @return true when snapshot copied, false if busy/not initialized.
   bool tryGetRtcDebugSnapshot(RtcDebugSnapshot& out) const;
-
-  /// @brief Get current output override mode.
-  OutputOverrideMode getOutputOverrideMode() const;
-
-  /// @brief Try to get output channel state (0..3).
-  /// @param index Channel index.
-  /// @param outState Output state.
-  /// @return true when state copied, false on invalid index or lock busy.
-  bool tryGetOutputChannelState(size_t index, bool& outState) const;
 
  private:
   void pushEvent(uint32_t nowMs, uint16_t code, const char* msg);

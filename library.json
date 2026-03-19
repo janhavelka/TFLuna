@@ -1,7 +1,7 @@
 {
   "name": "TFLunaControl",
   "version": "1.5.0",
-  "description": "ESP32-S3 TF-Luna stability firmware with deterministic app lifecycle, SSD1315 OLED, RV3032 RTC, SD logging, web UI, and serial CLI diagnostics.",
+  "description": "ESP32-S2/S3 TF-Luna measurement firmware with deterministic app lifecycle, SSD1315 OLED, RV3032 RTC, opt-in SD logging, SoftAP web UI, serial CLI diagnostics, and endstop inputs.",
   "keywords": [
     "esp32",
     "esp32-s2",
