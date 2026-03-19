@@ -1,14 +1,8 @@
 #include "web/WebServer.h"
 
-#include "CO2Control/CO2Control.h"
+#include "TFLunaControl/TFLunaControl.h"
 
-#if __has_include("CO2Control/Version.h")
-#include "CO2Control/Version.h"
-#else
-namespace CO2Control { static constexpr const char* VERSION = "dev"; }
-#endif
-
-namespace CO2Control {
+namespace TFLunaControl {
 
 size_t WebServer::clampGraphCount(size_t requested, size_t capacity) {
   if (capacity == 0U) {
@@ -55,24 +49,24 @@ void WebServer::setUiEventFetchCount(uint16_t eventCount) {
   _uiEventFetchCount = static_cast<uint16_t>(clamped);
 }
 
-}  // namespace CO2Control
+}  // namespace TFLunaControl
 
-#if defined(ARDUINO) && CO2CONTROL_ENABLE_WEB
+#if defined(ARDUINO) && TFLUNACTRL_ENABLE_WEB
 #include <Arduino.h>
 #include <ArduinoJson.h>
 #include <ESPAsyncWebServer.h>
 #include <WiFi.h>
 #if __has_include(<ESPmDNS.h>)
-#define CO2CONTROL_HAS_MDNS 1
+#define TFLUNACTRL_HAS_MDNS 1
 #include <ESPmDNS.h>
 #else
-#define CO2CONTROL_HAS_MDNS 0
+#define TFLUNACTRL_HAS_MDNS 0
 #endif
 #if __has_include(<esp_wifi.h>)
-#define CO2CONTROL_HAS_ESP_WIFI_API 1
+#define TFLUNACTRL_HAS_ESP_WIFI_API 1
 #include <esp_wifi.h>
 #else
-#define CO2CONTROL_HAS_ESP_WIFI_API 0
+#define TFLUNACTRL_HAS_ESP_WIFI_API 0
 #endif
 #include <freertos/semphr.h>
 #include <memory>
@@ -86,7 +80,7 @@ void WebServer::setUiEventFetchCount(uint16_t eventCount) {
 #include "web/WebLockOrder.h"
 #include "web/WebPages.h"
 
-namespace CO2Control {
+namespace TFLunaControl {
 
 namespace {
 
@@ -642,29 +636,10 @@ Status WebServer::setupHandlers() {
   _impl->server.addHandler(&_impl->ws);
 
   _impl->server.on("/", HTTP_GET, [this](AsyncWebServerRequest* request) {
-    // INDEX_HTML is ~112 KB; String copy + replace() can consume ~224 KB peak.
-    // Serialize access so concurrent requests cannot double that allocation.
-    if (_impl->indexPageBusy) {
-      request->send(503, "text/plain", "Page busy, retry");
-      return;
-    }
-    _impl->indexPageBusy = true;
-    String page = INDEX_HTML;
-    if (page.length() == 0U) {
-      _impl->indexPageBusy = false;
-      request->send(503, "text/plain", "Page alloc failed");
-      return;
-    }
-    page.replace("__WS_RECONNECT_MS__", String(_uiWsReconnectMs));
-    page.replace("__GRAPH_REFRESH_MS__", String(_uiGraphRefreshMs));
-    page.replace("__EVENTS_REFRESH_MS__", String(_uiEventsRefreshMs));
-    page.replace("__EVENT_FETCH_COUNT__", String(_uiEventFetchCount));
-    page.replace("__FW_VERSION__", String(VERSION));
     AsyncWebServerResponse* response =
-        request->beginResponse(200, "text/html; charset=utf-8", page);
-    _impl->indexPageBusy = false;
+        request->beginResponse(200, "text/html; charset=utf-8", kIndexHtml);
     if (response == nullptr) {
-      request->send(503, "text/plain", "Response alloc failed");
+      request->send(503, "text/plain", "Page alloc failed");
       return;
     }
     addNoStoreHeaders(response);
@@ -720,14 +695,8 @@ Status WebServer::setupHandlers() {
     bool first = true;
     for (size_t i = 0; i < count; ++i) {
       const DeviceStatus& st = statuses[i];
-      // Hide disabled subsystems from the API to avoid confusing clients.
-      if (st.id == DeviceId::RS485 && st.health == HealthState::DEGRADED &&
-          st.lastStatus.code == Err::NOT_INITIALIZED) {
-        continue;
-      }
       StaticJsonDocument<HardwareSettings::WEB_DEVICE_ITEM_JSON_DOC_BYTES> itemDoc;
-      // Use the DeviceId enum value as stable identifier (not the loop index,
-      // which can shift when devices like RS485 are skipped above).
+      // Use the DeviceId enum value as stable identifier.
       populateDeviceStatusJson(itemDoc, st, static_cast<uint32_t>(st.id));
       if (!first) {
         response->print(",");
@@ -837,8 +806,9 @@ Status WebServer::setupHandlers() {
     Status st = Status(Err::INVALID_CONFIG, 0, "unsupported device");
     if (strcmp(dev, "i2c_bus") == 0 || strcmp(dev, "env") == 0 || strcmp(dev, "rtc") == 0) {
       st = _app->enqueueRecoverI2cBus();
-    } else if (strcmp(dev, "co2") == 0) {
-      st = _app->enqueueRecoverCo2Sensor();
+    } else if (strcmp(dev, "lidar") == 0 || strcmp(dev, "tfluna") == 0 ||
+               strcmp(dev, "co2") == 0) {
+      st = _app->enqueueRecoverLidarSensor();
     } else if (strcmp(dev, "sd") == 0) {
       st = _app->enqueueRemountSd();
     }
@@ -918,8 +888,9 @@ Status WebServer::setupHandlers() {
       return;
     }
 
-    if (strcmp(dev, "co2") == 0) {
-      const Status st = _app->enqueueProbeCo2Sensor();
+    if (strcmp(dev, "lidar") == 0 || strcmp(dev, "tfluna") == 0 ||
+        strcmp(dev, "co2") == 0) {
+      const Status st = _app->enqueueProbeLidarSensor();
       if (!st.ok()) {
         if (st.code == Err::RESOURCE_BUSY) {
           request->send(503, "text/plain", st.msg);
@@ -1182,8 +1153,15 @@ Status WebServer::setupHandlers() {
       persist = doc["persist"].as<bool>();
     }
 
-    if (doc.containsKey("sample_interval_sec")) {
-      updated.sampleIntervalSec = doc["sample_interval_sec"].as<uint32_t>();
+    if (doc.containsKey("sample_interval_ms")) {
+      updated.sampleIntervalMs = doc["sample_interval_ms"].as<uint32_t>();
+    } else if (doc.containsKey("sample_interval_sec")) {
+      const uint32_t seconds = doc["sample_interval_sec"].as<uint32_t>();
+      if (seconds > (UINT32_MAX / 1000U)) {
+        updated.sampleIntervalMs = UINT32_MAX;
+      } else {
+        updated.sampleIntervalMs = seconds * 1000U;
+      }
     }
     if (doc.containsKey("log_daily_enabled")) {
       updated.logDailyEnabled = doc["log_daily_enabled"].as<bool>();
@@ -1241,6 +1219,24 @@ Status WebServer::setupHandlers() {
     }
     if (doc.containsKey("log_events_max_bytes")) {
       updated.logEventsMaxBytes = doc["log_events_max_bytes"].as<uint32_t>();
+    }
+    if (doc.containsKey("lidar_service_ms")) {
+      updated.lidarServiceMs = doc["lidar_service_ms"].as<uint32_t>();
+    }
+    if (doc.containsKey("lidar_min_strength")) {
+      updated.lidarMinStrength = doc["lidar_min_strength"].as<uint16_t>();
+    }
+    if (doc.containsKey("lidar_max_distance_cm")) {
+      updated.lidarMaxDistanceCm = doc["lidar_max_distance_cm"].as<uint16_t>();
+    }
+    if (doc.containsKey("lidar_frame_stale_ms")) {
+      updated.lidarFrameStaleMs = doc["lidar_frame_stale_ms"].as<uint32_t>();
+    }
+    if (doc.containsKey("serial_print_interval_ms")) {
+      updated.serialPrintIntervalMs = doc["serial_print_interval_ms"].as<uint32_t>();
+    }
+    if (doc.containsKey("cli_verbosity")) {
+      updated.cliVerbosity = doc["cli_verbosity"].as<uint8_t>();
     }
     if (doc.containsKey("i2c_freq_hz")) {
       updated.i2cFreqHz = doc["i2c_freq_hz"].as<uint32_t>();
@@ -1838,7 +1834,7 @@ Status WebServer::setupHandlers() {
   return Ok();
 }
 
-Status WebServer::begin(CO2Control* app) {
+Status WebServer::begin(TFLunaControl* app) {
   if (app == nullptr) {
     return Status(Err::INVALID_CONFIG, 0, "app null");
   }
@@ -1957,14 +1953,14 @@ Status WebServer::startAp(const RuntimeSettings& settings) {
   // 120 s is well above typical WiFi power-save null-frame intervals
   // (30-60 s) so sleeping/locked phones stay associated.
   // Note: esp_wifi_set_inactive_time() may be removed in future IDF releases.
-#if CO2CONTROL_HAS_ESP_WIFI_API && __has_include(<esp_wifi.h>)
+#if TFLUNACTRL_HAS_ESP_WIFI_API && __has_include(<esp_wifi.h>)
   {
     #if !defined(ESP_IDF_VERSION_MAJOR) || ESP_IDF_VERSION_MAJOR < 6
     (void)esp_wifi_set_inactive_time(WIFI_IF_AP, 120);
     #endif
   }
 #endif
-#if CO2CONTROL_HAS_MDNS
+#if TFLUNACTRL_HAS_MDNS
   _mdnsRunning = false;
   _mdnsNextRetryMs = 0;
   if (MDNS.begin(kApHostname)) {
@@ -1995,7 +1991,7 @@ void WebServer::stopAp() {
     _impl->ws.closeAll();
     _impl->clearWsClients();
   }
-#if CO2CONTROL_HAS_MDNS
+#if TFLUNACTRL_HAS_MDNS
   MDNS.end();
 #endif
   _mdnsRunning = false;
@@ -2024,16 +2020,16 @@ void WebServer::broadcastDeferred(uint32_t nowMs) {
     return;
   }
 
-  // WiFi stat cache refresh — calls esp_wifi_ap_get_sta_list(),
+  // WiFi stat cache refresh â€” calls esp_wifi_ap_get_sta_list(),
   // esp_wifi_get_config(), WiFi.softAPgetStationNum() which all use
   // cross-task IPC and can block 50-200 ms when the lwIP task is busy.
   // Runs outside tick timing at 1 Hz.
   refreshWifiStatsIfDue(nowMs);
 
-#if CO2CONTROL_HAS_MDNS
+#if TFLUNACTRL_HAS_MDNS
   // MDNS.begin() performs multicast socket setup via tcpip_api_call()
   // and can stall for hundreds of milliseconds to seconds.  Retries
-  // every 2 s until successful — must not run inside cooperative tick.
+  // every 2 s until successful â€” must not run inside cooperative tick.
   if (!_mdnsRunning &&
       (_mdnsNextRetryMs == 0 || static_cast<int32_t>(nowMs - _mdnsNextRetryMs) >= 0)) {
     if (MDNS.begin(kApHostname)) {
@@ -2046,7 +2042,7 @@ void WebServer::broadcastDeferred(uint32_t nowMs) {
   }
 #endif
 
-  // WS client cleanup — may trigger TCP FIN via tcpip_api_call()
+  // WS client cleanup â€” may trigger TCP FIN via tcpip_api_call()
   // for dead clients, so it runs here outside tick timing.
   if (_impl->ws.count() > 0U &&
       (_lastWsCleanupMs == 0U ||
@@ -2141,7 +2137,7 @@ void WebServer::refreshWifiStatsNow() {
     return;
   }
   _cachedStationCount = WiFi.softAPgetStationNum();
-#if CO2CONTROL_HAS_ESP_WIFI_API
+#if TFLUNACTRL_HAS_ESP_WIFI_API
   {
     wifi_sta_list_t staList{};
     if (esp_wifi_ap_get_sta_list(&staList) == ESP_OK && staList.num > 0) {
@@ -2203,17 +2199,17 @@ bool WebServer::hasRecentUiActivity(uint32_t nowMs, uint32_t windowMs) const {
   return static_cast<int32_t>(nowMs - last) <= static_cast<int32_t>(window);
 }
 
-}  // namespace CO2Control
+}  // namespace TFLunaControl
 
 #else
 
-namespace CO2Control {
+namespace TFLunaControl {
 
 Status WebServer::setupHandlers() {
   return Ok();
 }
 
-Status WebServer::begin(CO2Control* app) {
+Status WebServer::begin(TFLunaControl* app) {
   _app = app;
   _mdnsRunning = false;
   _mdnsNextRetryMs = 0;
@@ -2280,6 +2276,6 @@ bool WebServer::hasRecentUiActivity(uint32_t nowMs, uint32_t windowMs) const {
   return false;
 }
 
-}  // namespace CO2Control
+}  // namespace TFLunaControl
 
 #endif

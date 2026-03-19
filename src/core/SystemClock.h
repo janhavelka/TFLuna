@@ -7,13 +7,13 @@
 #if __has_include(<SystemChrono/Version.h>)
 #include <SystemChrono/Version.h>
 static_assert(SystemChrono::VERSION_CODE >= 10200,
-              "CO2Control requires SystemChrono >= v1.2.0");
+              "TFLunaControl requires SystemChrono >= v1.2.0");
 #endif
 #else
 #include <chrono>
 #endif
 
-namespace CO2Control {
+namespace TFLunaControl {
 namespace SystemClock {
 
 inline uint64_t nowMs64() {
@@ -47,4 +47,4 @@ inline uint32_t nowUs() {
 }
 
 }  // namespace SystemClock
-}  // namespace CO2Control
+}  // namespace TFLunaControl

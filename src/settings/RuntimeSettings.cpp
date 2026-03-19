@@ -1,10 +1,10 @@
-#include "CO2Control/RuntimeSettings.h"
+#include "TFLunaControl/RuntimeSettings.h"
 
 #include <math.h>
 #include <stddef.h>
 #include <string.h>
 
-namespace CO2Control {
+namespace TFLunaControl {
 
 static bool isAsciiAlphaNum(char c) {
   return (c >= '0' && c <= '9') ||
@@ -34,8 +34,8 @@ static bool isValidLogSessionName(const char* name, size_t len) {
 }
 
 Status RuntimeSettings::validate() const {
-  if (sampleIntervalSec < MIN_SAMPLE_INTERVAL_SEC || sampleIntervalSec > MAX_SAMPLE_INTERVAL_SEC) {
-    return Status(Err::INVALID_CONFIG, 0, "sampleIntervalSec out of range");
+  if (sampleIntervalMs < MIN_SAMPLE_INTERVAL_MS || sampleIntervalMs > MAX_SAMPLE_INTERVAL_MS) {
+    return Status(Err::INVALID_CONFIG, 0, "sampleIntervalMs out of range");
   }
   if (logFlushMs < MIN_LOG_FLUSH_MS || logFlushMs > MAX_LOG_FLUSH_MS) {
     return Status(Err::INVALID_CONFIG, 0, "logFlushMs out of range");
@@ -55,6 +55,25 @@ Status RuntimeSettings::validate() const {
   }
   if (logEventsMaxBytes < MIN_LOG_EVENTS_MAX_BYTES || logEventsMaxBytes > MAX_LOG_EVENTS_MAX_BYTES) {
     return Status(Err::INVALID_CONFIG, 0, "logEventsMaxBytes out of range");
+  }
+  if (lidarServiceMs < MIN_LIDAR_SERVICE_MS || lidarServiceMs > MAX_LIDAR_SERVICE_MS) {
+    return Status(Err::INVALID_CONFIG, 0, "lidarServiceMs out of range");
+  }
+  if (lidarMinStrength < MIN_LIDAR_SIGNAL_STRENGTH || lidarMinStrength > MAX_LIDAR_SIGNAL_STRENGTH) {
+    return Status(Err::INVALID_CONFIG, 0, "lidarMinStrength out of range");
+  }
+  if (lidarMaxDistanceCm < MIN_LIDAR_MAX_DISTANCE_CM || lidarMaxDistanceCm > MAX_LIDAR_MAX_DISTANCE_CM) {
+    return Status(Err::INVALID_CONFIG, 0, "lidarMaxDistanceCm out of range");
+  }
+  if (lidarFrameStaleMs < MIN_LIDAR_FRAME_STALE_MS || lidarFrameStaleMs > MAX_LIDAR_FRAME_STALE_MS) {
+    return Status(Err::INVALID_CONFIG, 0, "lidarFrameStaleMs out of range");
+  }
+  if (serialPrintIntervalMs < MIN_SERIAL_PRINT_INTERVAL_MS ||
+      serialPrintIntervalMs > MAX_SERIAL_PRINT_INTERVAL_MS) {
+    return Status(Err::INVALID_CONFIG, 0, "serialPrintIntervalMs out of range");
+  }
+  if (cliVerbosity < MIN_CLI_VERBOSITY || cliVerbosity > MAX_CLI_VERBOSITY) {
+    return Status(Err::INVALID_CONFIG, 0, "cliVerbosity out of range");
   }
   if (logAllEnabled &&
       (logAllMaxBytes < MIN_LOG_ALL_MAX_BYTES || logAllMaxBytes > MAX_LOG_ALL_MAX_BYTES)) {
@@ -411,4 +430,4 @@ void RuntimeSettings::restoreDefaults() {
   *this = RuntimeSettings();
 }
 
-}  // namespace CO2Control
+}  // namespace TFLunaControl

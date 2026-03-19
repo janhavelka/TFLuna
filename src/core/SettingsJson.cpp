@@ -2,12 +2,12 @@
 
 #include <string.h>
 
-namespace CO2Control {
+namespace TFLunaControl {
 
 void populateSettingsJson(JsonDocument& doc, const RuntimeSettings& s) {
   const bool hasPassword = strnlen(s.apPass, sizeof(s.apPass)) > 0;
 
-  doc["sample_interval_sec"] = s.sampleIntervalSec;
+  doc["sample_interval_ms"] = s.sampleIntervalMs;
   doc["log_daily_enabled"] = s.logDailyEnabled;
   doc["log_all_enabled"] = s.logAllEnabled;
   doc["log_all_max_bytes"] = s.logAllMaxBytes;
@@ -18,6 +18,12 @@ void populateSettingsJson(JsonDocument& doc, const RuntimeSettings& s) {
   doc["log_max_write_retries"] = s.logMaxWriteRetries;
   doc["log_session_name"] = s.logSessionName;
   doc["log_events_max_bytes"] = s.logEventsMaxBytes;
+  doc["lidar_service_ms"] = s.lidarServiceMs;
+  doc["lidar_min_strength"] = s.lidarMinStrength;
+  doc["lidar_max_distance_cm"] = s.lidarMaxDistanceCm;
+  doc["lidar_frame_stale_ms"] = s.lidarFrameStaleMs;
+  doc["serial_print_interval_ms"] = s.serialPrintIntervalMs;
+  doc["cli_verbosity"] = s.cliVerbosity;
 
   doc["i2c_freq_hz"] = s.i2cFreqHz;
   doc["i2c_op_timeout_ms"] = s.i2cOpTimeoutMs;
@@ -121,4 +127,4 @@ void populateSettingsJson(JsonDocument& doc, const RuntimeSettings& s) {
   doc["web_max_rtc_body_bytes"] = s.webMaxRtcBodyBytes;
 }
 
-}  // namespace CO2Control
+}  // namespace TFLunaControl

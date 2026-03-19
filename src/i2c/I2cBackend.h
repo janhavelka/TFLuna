@@ -3,9 +3,9 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "CO2Control/Status.h"
+#include "TFLunaControl/Status.h"
 
-namespace CO2Control {
+namespace TFLunaControl {
 
 struct I2cBackendConfig {
   int sdaPin = -1;
@@ -70,4 +70,4 @@ class IdfI2cBackend : public II2cBackend {
   void removeAllDevices();
 };
 
-}  // namespace CO2Control
+}  // namespace TFLunaControl

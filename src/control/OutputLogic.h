@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 
-namespace CO2Control {
+namespace TFLunaControl {
 
 /**
  * @brief Hysteresis and min on/off control logic.
@@ -47,4 +47,4 @@ class OutputLogic {
   uint32_t _lastChangeMs = 0;
 };
 
-}  // namespace CO2Control
+}  // namespace TFLunaControl

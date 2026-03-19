@@ -8,7 +8,7 @@
 #include <esp_log.h>
 #endif
 
-namespace CO2Control {
+namespace TFLunaControl {
 
 const char* IdfI2cBackend::name() const {
   return "idf5";
@@ -213,4 +213,4 @@ Status IdfI2cBackend::transfer(const I2cTransfer& transfer, uint32_t& durationUs
 #endif
 }
 
-}  // namespace CO2Control
+}  // namespace TFLunaControl

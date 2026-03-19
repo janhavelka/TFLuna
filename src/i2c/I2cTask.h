@@ -1,67 +1,67 @@
 #pragma once
 
-#include "CO2Control/I2cRaw.h"
+#include "TFLunaControl/I2cRaw.h"
 #include "core/CommandQueue.h"
 #include "i2c/I2cBackend.h"
 #include "i2c/I2cGpioProbe.h"
 #include "i2c/I2cRequests.h"
 #include "i2c/RecoveryPolicy.h"
 
-#ifndef CO2CONTROL_ENABLE_DISPLAY
-#define CO2CONTROL_ENABLE_DISPLAY 0
+#ifndef TFLUNACTRL_ENABLE_DISPLAY
+#define TFLUNACTRL_ENABLE_DISPLAY 0
 #endif
 
 #if defined(ARDUINO) && __has_include(<BME280/BME280.h>)
-#define CO2CONTROL_HAS_BME280_LIB 1
+#define TFLUNACTRL_HAS_BME280_LIB 1
 #include <BME280/BME280.h>
 #else
-#define CO2CONTROL_HAS_BME280_LIB 0
+#define TFLUNACTRL_HAS_BME280_LIB 0
 #endif
 
 #if defined(ARDUINO) && __has_include(<SHT3x/SHT3x.h>)
-#define CO2CONTROL_HAS_SHT3X_LIB 1
+#define TFLUNACTRL_HAS_SHT3X_LIB 1
 #include <SHT3x/SHT3x.h>
 #else
-#define CO2CONTROL_HAS_SHT3X_LIB 0
+#define TFLUNACTRL_HAS_SHT3X_LIB 0
 #endif
 
 #if defined(ARDUINO) && __has_include(<RV3032/RV3032.h>)
-#define CO2CONTROL_HAS_RV3032_LIB 1
+#define TFLUNACTRL_HAS_RV3032_LIB 1
 #include <RV3032/RV3032.h>
 #else
-#define CO2CONTROL_HAS_RV3032_LIB 0
+#define TFLUNACTRL_HAS_RV3032_LIB 0
 #endif
 
-#if CO2CONTROL_ENABLE_DISPLAY && defined(ARDUINO) && __has_include(<SSD1315.h>)
-#define CO2CONTROL_HAS_SSD1315_LIB 1
+#if TFLUNACTRL_ENABLE_DISPLAY && defined(ARDUINO) && __has_include(<SSD1315.h>)
+#define TFLUNACTRL_HAS_SSD1315_LIB 1
 #include <SSD1315.h>
 #else
-#define CO2CONTROL_HAS_SSD1315_LIB 0
+#define TFLUNACTRL_HAS_SSD1315_LIB 0
 #endif
 
-#if CO2CONTROL_HAS_BME280_LIB
-static_assert(BME280::VERSION_CODE >= 10201, "CO2Control requires BME280 >= v1.2.1");
+#if TFLUNACTRL_HAS_BME280_LIB
+static_assert(BME280::VERSION_CODE >= 10201, "TFLunaControl requires BME280 >= v1.2.1");
 #endif
 
-#if CO2CONTROL_HAS_SHT3X_LIB
-static_assert(SHT3x::VERSION_CODE >= 10400, "CO2Control requires SHT3x >= v1.4.0");
+#if TFLUNACTRL_HAS_SHT3X_LIB
+static_assert(SHT3x::VERSION_CODE >= 10400, "TFLunaControl requires SHT3x >= v1.4.0");
 #endif
 
-#if CO2CONTROL_HAS_RV3032_LIB
+#if TFLUNACTRL_HAS_RV3032_LIB
 #if __has_include(<RV3032/Version.h>)
 #include <RV3032/Version.h>
-static_assert(RV3032::VERSION_CODE >= 10300, "CO2Control requires RV3032-C7 >= v1.3.0");
+static_assert(RV3032::VERSION_CODE >= 10300, "TFLunaControl requires RV3032-C7 >= v1.3.0");
 #endif
 #endif
 
-#if CO2CONTROL_HAS_SSD1315_LIB
+#if TFLUNACTRL_HAS_SSD1315_LIB
 #if __has_include(<ssd1315/Version.h>)
 #include <ssd1315/Version.h>
-static_assert(SSD1315::VERSION_CODE >= 10100, "CO2Control requires SSD1315 >= v1.1.0");
+static_assert(SSD1315::VERSION_CODE >= 10100, "TFLunaControl requires SSD1315 >= v1.1.0");
 #endif
 #endif
 
-#if CO2CONTROL_HAS_SSD1315_LIB
+#if TFLUNACTRL_HAS_SSD1315_LIB
 namespace SSD1315Api = SSD1315;
 #endif
 
@@ -72,7 +72,7 @@ namespace SSD1315Api = SSD1315;
 #include <freertos/task.h>
 #endif
 
-namespace CO2Control {
+namespace TFLunaControl {
 
 class I2cTask : public II2cRequestPort {
  public:
@@ -123,7 +123,7 @@ class I2cTask : public II2cRequestPort {
   void refreshRtcDebugSnapshot(uint32_t nowMs);
   II2cBackend* selectBackend();
 
-#if CO2CONTROL_HAS_BME280_LIB
+#if TFLUNACTRL_HAS_BME280_LIB
   static BME280::Status bmeI2cWriteThunk(uint8_t addr,
                                          const uint8_t* data,
                                          size_t len,
@@ -152,7 +152,7 @@ class I2cTask : public II2cRequestPort {
   Status handleBmeRead(const I2cRequest& request, I2cResult& result, uint32_t nowMs);
 #endif
 
-#if CO2CONTROL_HAS_SHT3X_LIB
+#if TFLUNACTRL_HAS_SHT3X_LIB
   static SHT3x::Status shtI2cWriteThunk(uint8_t addr,
                                         const uint8_t* data,
                                         size_t len,
@@ -181,7 +181,7 @@ class I2cTask : public II2cRequestPort {
   Status handleShtRead(const I2cRequest& request, I2cResult& result, uint32_t nowMs);
 #endif
 
-#if CO2CONTROL_HAS_RV3032_LIB
+#if TFLUNACTRL_HAS_RV3032_LIB
   static RV3032::Status rtcI2cWriteThunk(uint8_t addr,
                                          const uint8_t* data,
                                          size_t len,
@@ -210,7 +210,7 @@ class I2cTask : public II2cRequestPort {
   Status handleRtcSet(const I2cRequest& request, I2cResult& result, uint32_t nowMs);
 #endif
 
-#if CO2CONTROL_HAS_SSD1315_LIB
+#if TFLUNACTRL_HAS_SSD1315_LIB
   static SSD1315Api::Status displayI2cWriteThunk(uint8_t addr,
                                               const uint8_t* data,
                                               size_t len,
@@ -258,33 +258,35 @@ class I2cTask : public II2cRequestPort {
   bool _forceBusStuck = false;
   RtcDebugSnapshot _rtcDebug{};
 
-#if CO2CONTROL_HAS_BME280_LIB
+#if TFLUNACTRL_HAS_BME280_LIB
   BME280::BME280 _envBme{};
   bool _envBmeInitialized = false;
   uint8_t _envBmeAddress = 0;
   uint32_t _envBmeTimeoutMs = 0;
 #endif
 
-#if CO2CONTROL_HAS_SHT3X_LIB
+#if TFLUNACTRL_HAS_SHT3X_LIB
   SHT3x::SHT3x _envSht{};
   bool _envShtInitialized = false;
   uint8_t _envShtAddress = 0;
   uint32_t _envShtTimeoutMs = 0;
 #endif
 
-#if CO2CONTROL_HAS_RV3032_LIB
+#if TFLUNACTRL_HAS_RV3032_LIB
   RV3032::RV3032 _rtcRv3032{};
   bool _rtcRv3032Initialized = false;
   uint8_t _rtcRv3032Address = 0;
   uint32_t _rtcRv3032TimeoutMs = 0;
 #endif
 
-#if CO2CONTROL_HAS_SSD1315_LIB
+#if TFLUNACTRL_HAS_SSD1315_LIB
   SSD1315Api::SSD1315 _display{};
   bool _displayInitialized = false;
   uint8_t _displayAddress = 0;
   uint32_t _displayTimeoutMs = 0;
   uint8_t _displayOfflineThreshold = 0;
+  bool _displayFlipX = false;
+  bool _displayFlipY = false;
   uint32_t _displayNextRecoverMs = 0;
 
   Status _displayRtcStatus = Status(Err::NOT_INITIALIZED, 0, "RTC waiting first sample");
@@ -319,4 +321,4 @@ class I2cTask : public II2cRequestPort {
 
 };
 
-}  // namespace CO2Control
+}  // namespace TFLunaControl

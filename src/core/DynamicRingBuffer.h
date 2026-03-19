@@ -5,10 +5,10 @@
 #include <string.h>
 #include <type_traits>
 
-#include "CO2Control/Status.h"
+#include "TFLunaControl/Status.h"
 #include "core/PsramSupport.h"
 
-namespace CO2Control {
+namespace TFLunaControl {
 
 /**
  * @brief Runtime-capacity ring buffer with optional PSRAM backing.
@@ -123,4 +123,4 @@ class DynamicRingBuffer {
   bool _usingPsram = false;
 };
 
-}  // namespace CO2Control
+}  // namespace TFLunaControl

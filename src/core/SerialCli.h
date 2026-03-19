@@ -3,14 +3,14 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "CO2Control/CO2Control.h"
-#include "CO2Control/Status.h"
+#include "TFLunaControl/TFLunaControl.h"
+#include "TFLunaControl/Status.h"
 
-namespace CO2Control {
+namespace TFLunaControl {
 
 class SerialCli {
  public:
-  explicit SerialCli(CO2Control& app);
+  explicit SerialCli(TFLunaControl& app);
 
   Status begin();
   void tick(uint32_t nowMs);
@@ -37,15 +37,16 @@ class SerialCli {
   void applyPreset(const char* domain, const char* preset, bool persist);
   bool loadDeviceStatuses(size_t& outCount);
   const DeviceStatus* findDeviceInScratch(const char* name, size_t count) const;
+  uint8_t currentVerbosity() const;
   void queueSettingsUpdate(const RuntimeSettings& settings, bool persist);
   void executeLine(char* line, uint32_t nowMs);
 
   static constexpr size_t LINE_BYTES = HardwareSettings::CLI_LINE_BYTES;
 
-  CO2Control& _app;
+  TFLunaControl& _app;
   char _line[LINE_BYTES] = {};
   size_t _lineLen = 0;
   DeviceStatus _deviceScratch[DEVICE_COUNT] = {};
 };
 
-}  // namespace CO2Control
+}  // namespace TFLunaControl

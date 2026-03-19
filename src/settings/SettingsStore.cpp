@@ -7,10 +7,10 @@
 #include <Preferences.h>
 #endif
 
-namespace CO2Control {
+namespace TFLunaControl {
 
 static constexpr uint32_t SETTINGS_MAGIC = 0x434F3243;  // "CO2C"
-static constexpr uint16_t SETTINGS_VERSION = 13;
+static constexpr uint16_t SETTINGS_VERSION = 15;
 
 struct SettingsBlob {
   uint32_t magic = SETTINGS_MAGIC;
@@ -35,7 +35,7 @@ Status SettingsStore::begin(bool enable) {
   }
 #ifdef ARDUINO
   Preferences prefs;
-  if (!prefs.begin("co2control", false)) {
+  if (!prefs.begin("tflunactrl", false)) {
     return Status(Err::COMM_FAILURE, 0, "NVS begin failed");
   }
   prefs.end();
@@ -51,7 +51,7 @@ Status SettingsStore::load(RuntimeSettings& settings) {
   }
 #ifdef ARDUINO
   Preferences prefs;
-  if (!prefs.begin("co2control", true)) {
+  if (!prefs.begin("tflunactrl", true)) {
     return Status(Err::COMM_FAILURE, 0, "NVS begin failed");
   }
 
@@ -87,7 +87,7 @@ Status SettingsStore::save(const RuntimeSettings& settings) {
   }
 #ifdef ARDUINO
   Preferences prefs;
-  if (!prefs.begin("co2control", false)) {
+  if (!prefs.begin("tflunactrl", false)) {
     return Status(Err::COMM_FAILURE, 0, "NVS begin failed");
   }
 
@@ -116,4 +116,4 @@ Status SettingsStore::factoryReset(RuntimeSettings& settings) {
   return save(settings);
 }
 
-}  // namespace CO2Control
+}  // namespace TFLunaControl

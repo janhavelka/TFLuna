@@ -1,6 +1,6 @@
 #pragma once
 
-namespace CO2Control {
+namespace TFLunaControl {
 
 class IWebTryLock {
  public:
@@ -49,4 +49,4 @@ class OrderedWebReadGuard {
   bool _scratchHeld = false;
 };
 
-}  // namespace CO2Control
+}  // namespace TFLunaControl

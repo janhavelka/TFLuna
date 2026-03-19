@@ -2,7 +2,7 @@
 
 #include "core/TimeUtil.h"
 
-namespace CO2Control {
+namespace TFLunaControl {
 
 static uint8_t bcdToDec(uint8_t value) {
   return static_cast<uint8_t>(((value >> 4U) * 10U) + (value & 0x0FU));
@@ -66,4 +66,4 @@ Status parseEnvSamplePayload(uint8_t address,
   return Ok();
 }
 
-}  // namespace CO2Control
+}  // namespace TFLunaControl

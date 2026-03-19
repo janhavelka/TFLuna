@@ -8,9 +8,9 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "CO2Control/Status.h"
+#include "TFLunaControl/Status.h"
 
-namespace CO2Control {
+namespace TFLunaControl {
 
 /// @brief Snapshot of asynchronous I2C bus scan state.
 struct I2cScanSnapshot {
@@ -30,4 +30,4 @@ struct I2cScanSnapshot {
   Status lastStatus = Status(Err::NOT_INITIALIZED, 0, "scan idle");
 };
 
-}  // namespace CO2Control
+}  // namespace TFLunaControl

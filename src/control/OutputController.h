@@ -3,13 +3,13 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "CO2Control/HardwareSettings.h"
-#include "CO2Control/RuntimeSettings.h"
-#include "CO2Control/Status.h"
-#include "CO2Control/Types.h"
+#include "TFLunaControl/HardwareSettings.h"
+#include "TFLunaControl/RuntimeSettings.h"
+#include "TFLunaControl/Status.h"
+#include "TFLunaControl/Types.h"
 #include "control/OutputLogic.h"
 
-namespace CO2Control {
+namespace TFLunaControl {
 
 /**
  * @brief Hardware output controller for MOSFETs and relays.
@@ -76,4 +76,4 @@ class OutputController {
   uint32_t _lastOutputChangeMs = 0;
 };
 
-}  // namespace CO2Control
+}  // namespace TFLunaControl

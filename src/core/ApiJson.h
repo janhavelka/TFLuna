@@ -4,11 +4,11 @@
 
 #include <ArduinoJson.h>
 
-#include "CO2Control/Health.h"
-#include "CO2Control/RuntimeSettings.h"
-#include "CO2Control/Types.h"
+#include "TFLunaControl/Health.h"
+#include "TFLunaControl/RuntimeSettings.h"
+#include "TFLunaControl/Types.h"
 
-namespace CO2Control {
+namespace TFLunaControl {
 
 /// @brief Convert health enum to API string.
 const char* healthToString(HealthState health);
@@ -37,4 +37,4 @@ void populateDeviceStatusJson(JsonDocument& doc, const DeviceStatus& status, uin
 /// @note Non-finite float values are emitted as null.
 void populateGraphSampleJson(JsonDocument& doc, const Sample& sample);
 
-}  // namespace CO2Control
+}  // namespace TFLunaControl

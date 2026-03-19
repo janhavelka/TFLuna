@@ -2,10 +2,10 @@
 
 #include <stdint.h>
 
-#include "CO2Control/HardwareSettings.h"
-#include "CO2Control/Status.h"
+#include "TFLunaControl/HardwareSettings.h"
+#include "TFLunaControl/Status.h"
 
-namespace CO2Control {
+namespace TFLunaControl {
 
 /**
  * @brief Debounced button handler with short/long/multi-press detection.
@@ -42,4 +42,4 @@ class ButtonManager {
   bool _multiPressEvent = false;
 };
 
-}  // namespace CO2Control
+}  // namespace TFLunaControl

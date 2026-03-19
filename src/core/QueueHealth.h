@@ -3,7 +3,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-namespace CO2Control {
+namespace TFLunaControl {
 
 /// @brief Decide if command queue health should be degraded.
 /// @note Degraded only when overflow is recent or queue depth remains high.
@@ -23,4 +23,4 @@ inline bool isCommandQueueDegraded(uint32_t nowMs,
   return (delta >= 0) && (static_cast<uint32_t>(delta) <= overflowRecentWindowMs);
 }
 
-}  // namespace CO2Control
+}  // namespace TFLunaControl

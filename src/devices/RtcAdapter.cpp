@@ -3,7 +3,7 @@
 #include "i2c/I2cOrchestrator.h"
 #include "core/TimeUtil.h"
 
-namespace CO2Control {
+namespace TFLunaControl {
 
 Status RtcAdapter::begin(const HardwareSettings& config, I2cOrchestrator* orchestrator) {
   (void)config;
@@ -62,4 +62,4 @@ Status RtcAdapter::getTime(uint64_t nowMs, RtcTime& out) const {
   return Status(Err::COMM_FAILURE, 0, "RTC fallback active");
 }
 
-}  // namespace CO2Control
+}  // namespace TFLunaControl

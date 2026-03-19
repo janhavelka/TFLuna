@@ -1,9 +1,9 @@
 #pragma once
 
-#include "CO2Control/RuntimeSettings.h"
-#include "CO2Control/Status.h"
+#include "TFLunaControl/RuntimeSettings.h"
+#include "TFLunaControl/Status.h"
 
-namespace CO2Control {
+namespace TFLunaControl {
 
 /**
  * @brief NVS persistence for RuntimeSettings.
@@ -29,4 +29,4 @@ class SettingsStore {
   bool _enabled = false;
 };
 
-}  // namespace CO2Control
+}  // namespace TFLunaControl

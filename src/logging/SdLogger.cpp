@@ -10,7 +10,7 @@
 #include <Arduino.h>
 #endif
 
-namespace CO2Control {
+namespace TFLunaControl {
 
 static constexpr char LOG_DIR[] = "/logs";
 static constexpr char DAILY_DIR[] = "/logs/daily";
@@ -19,7 +19,8 @@ static constexpr char DAILY_DIR[] = "/logs/daily";
 static constexpr uint32_t SD_FAST_MOUNT_RETRY_MS = 1000UL;
 static constexpr char RUNS_DIR[] = "/logs/runs";
 static constexpr char UNKNOWN_DAY[] = "unknown";
-static constexpr char CSV_HEADER[] = "ts_unix,ts_local,co2_ppm,temp_c,rh_pct,pressure_hpa,valid_mask\n";
+static constexpr char CSV_HEADER[] =
+    "timestamp,timestamp_ms,time_source,uptime_ms,sample_index,distance_cm,strength,temperature_c,valid_frame,signal_ok,env_temp_c,env_rh_pct,env_pressure_hpa\n";
 static constexpr char EVENTS_HEADER[] = "ts_unix,ts_local,event_code,event_msg\n";
 // --- FAT32-safe info timing ---
 // freeClusterCount() scans the entire FAT table and can block the
@@ -37,6 +38,24 @@ static constexpr uint16_t SESSION_PROBE_MAX = 65535U;
 static constexpr uint8_t SESSION_STAGE_IDLE = 0U;
 static constexpr uint8_t SESSION_STAGE_WAIT_RUNS_DIR = 1U;
 static constexpr uint8_t SESSION_STAGE_WAIT_SESSION_DIR = 2U;
+
+static void formatSampleTimestampMs(const Sample& sample, char* out, size_t outLen) {
+  if (out == nullptr || outLen == 0U) {
+    return;
+  }
+  out[0] = '\0';
+
+  if (sample.tsLocal[0] != '\0') {
+    snprintf(out,
+             outLen,
+             "%s.%03lu",
+             sample.tsLocal,
+             static_cast<unsigned long>(sample.uptimeMs % 1000UL));
+    return;
+  }
+
+  snprintf(out, outLen, "uptime+%lums", static_cast<unsigned long>(sample.uptimeMs));
+}
 static constexpr uint8_t SESSION_STAGE_WAIT_RESUME_LIST = 3U;
 static constexpr uint8_t SESSION_STAGE_WAIT_RESUME_STAT_DATA = 4U;
 static constexpr uint8_t SESSION_STAGE_WAIT_RESUME_STAT_EVENTS = 5U;
@@ -159,7 +178,7 @@ void SdLogger::resetAllSessionState(bool clearNames) {
   _allSessionProbeCount = 0;
   _allSessionRetryAfterMs = 0;
   _allSessionStage = SESSION_STAGE_IDLE;
-#if CO2CONTROL_HAS_ASYNC_SD
+#if TFLUNACTRL_HAS_ASYNC_SD
   _sessionRequestId = AsyncSD::INVALID_REQUEST_ID;
   _sessionSetupHandle = AsyncSD::INVALID_FILE_HANDLE;
 #endif
@@ -235,7 +254,7 @@ bool SdLogger::ensureSessionMarkerName(uint32_t nowMs) {
 }
 
 bool SdLogger::issueOpenForCurrentJob(uint32_t nowMs) {
-#if CO2CONTROL_HAS_ASYNC_SD
+#if TFLUNACTRL_HAS_ASYNC_SD
   const AsyncSD::RequestId id =
       _sd.requestOpen(_job.path,
                       AsyncSD::OpenMode::Write | AsyncSD::OpenMode::Create | AsyncSD::OpenMode::Append);
@@ -254,7 +273,7 @@ bool SdLogger::issueOpenForCurrentJob(uint32_t nowMs) {
 }
 
 bool SdLogger::rotateAllFilePart(uint32_t nowMs) {
-#if !CO2CONTROL_HAS_ASYNC_SD
+#if !TFLUNACTRL_HAS_ASYNC_SD
   (void)nowMs;
   return false;
 #else
@@ -284,7 +303,7 @@ bool SdLogger::rotateAllFilePart(uint32_t nowMs) {
 }
 
 bool SdLogger::rotateEventFilePart(uint32_t nowMs) {
-#if !CO2CONTROL_HAS_ASYNC_SD
+#if !TFLUNACTRL_HAS_ASYNC_SD
   (void)nowMs;
   return false;
 #else
@@ -314,7 +333,7 @@ bool SdLogger::ensureAllSessionReady(uint32_t nowMs) {
   if (_allSessionReady) {
     return true;
   }
-#if !CO2CONTROL_HAS_ASYNC_SD
+#if !TFLUNACTRL_HAS_ASYNC_SD
   (void)nowMs;
   return false;
 #else
@@ -369,7 +388,7 @@ void SdLogger::markUnmounted(uint32_t nowMs, const Status& cause) {
       _allSessionDirPath[0] != '\0' &&
       _allSessionMarkerName[0] != '\0';
   _mounted = false;
-#if CO2CONTROL_HAS_ASYNC_SD
+#if TFLUNACTRL_HAS_ASYNC_SD
   _job = FileJob{};
   _mountStage = MountStage::IDLE;
   _mountRequestId = AsyncSD::INVALID_REQUEST_ID;
@@ -577,7 +596,7 @@ Status SdLogger::begin(const HardwareSettings& config,
   _eventTail = 0;
   _eventCount = 0;
 
-#if CO2CONTROL_HAS_ASYNC_SD
+#if TFLUNACTRL_HAS_ASYNC_SD
   _sdStarted = false;
   _mountStage = MountStage::IDLE;
   _mountRequestId = AsyncSD::INVALID_REQUEST_ID;
@@ -614,7 +633,7 @@ void SdLogger::applySettings(const RuntimeSettings& settings) {
     _allSessionNeedsFreshName = true;
     _allSessionStage = SESSION_STAGE_IDLE;
     _allSessionRetryAfterMs = 0;
-#if CO2CONTROL_HAS_ASYNC_SD
+#if TFLUNACTRL_HAS_ASYNC_SD
     _sessionRequestId = AsyncSD::INVALID_REQUEST_ID;
 #endif
   } else if (_allCapped) {
@@ -661,7 +680,7 @@ void SdLogger::end() {
   _eventRotateCount = 0;
   _sampleLinesTotal = 0;
   _eventLinesTotal = 0;
-#if CO2CONTROL_HAS_ASYNC_SD
+#if TFLUNACTRL_HAS_ASYNC_SD
   if (_sdStarted) {
     _sd.end();
     _sdStarted = false;
@@ -688,7 +707,7 @@ bool SdLogger::isCardPresent() const {
 #endif
 }
 
-#if CO2CONTROL_HAS_ASYNC_SD
+#if TFLUNACTRL_HAS_ASYNC_SD
 static const char* asyncSdErrorMessage(AsyncSD::ErrorCode code, const char* fallback) {
   switch (code) {
     case AsyncSD::ErrorCode::CardInitFailed:
@@ -2029,7 +2048,7 @@ Status SdLogger::mount(uint32_t nowMs) {
 
   if (!isCardPresent()) {
     _mounted = false;
-#if CO2CONTROL_HAS_ASYNC_SD
+#if TFLUNACTRL_HAS_ASYNC_SD
     _job = FileJob{};
     _mountStage = MountStage::IDLE;
     _mountRequestId = AsyncSD::INVALID_REQUEST_ID;
@@ -2051,7 +2070,7 @@ Status SdLogger::mount(uint32_t nowMs) {
     return st;
   }
 
-#if CO2CONTROL_HAS_ASYNC_SD
+#if TFLUNACTRL_HAS_ASYNC_SD
   if (!setupAsyncSd(nowMs)) {
     _mounted = false;
     return _lastError;
@@ -2093,7 +2112,7 @@ Status SdLogger::remount(uint32_t nowMs) {
   resetAllSessionState(!preserveSessionIdentity);
   _allSessionNeedsFreshName = _settings.logAllEnabled ? !preserveSessionIdentity : false;
   invalidateInfoCache();
-#if CO2CONTROL_HAS_ASYNC_SD
+#if TFLUNACTRL_HAS_ASYNC_SD
   _job = FileJob{};
   _mountStage = MountStage::IDLE;
   _mountRequestId = AsyncSD::INVALID_REQUEST_ID;
@@ -2126,7 +2145,7 @@ Status SdLogger::probe(uint32_t nowMs) {
   if (!_mounted) {
     return _lastError.ok() ? Status(Err::COMM_FAILURE, 0, "SD not mounted") : _lastError;
   }
-#if CO2CONTROL_HAS_ASYNC_SD
+#if TFLUNACTRL_HAS_ASYNC_SD
   if (!_sdStarted) {
     return Status(Err::NOT_INITIALIZED, 0, "AsyncSD not started");
   }
@@ -2201,16 +2220,25 @@ Status SdLogger::logSample(const Sample& sample, uint32_t nowMs) {
   strncpy(rec.dayKey, dayKey, sizeof(rec.dayKey) - 1);
   rec.dayKey[sizeof(rec.dayKey) - 1] = '\0';
 
+  char timestampMs[32] = {0};
+  formatSampleTimestampMs(sample, timestampMs, sizeof(timestampMs));
+
   const int written = snprintf(rec.line,
                                sizeof(rec.line),
-                               "%lu,%s,%.1f,%.2f,%.2f,%.2f,%u\n",
-                               static_cast<unsigned long>(sample.tsUnix),
-                               sample.tsLocal,
-                               static_cast<double>(sample.co2ppm),
+                               "%s,%s,%s,%lu,%lu,%u,%u,%.2f,%u,%u,%.2f,%.2f,%.2f\n",
+                               (sample.tsLocal[0] != '\0') ? sample.tsLocal : "uptime",
+                               timestampMs,
+                               (sample.tsLocal[0] != '\0') ? "rtc" : "uptime",
+                               static_cast<unsigned long>(sample.uptimeMs),
+                               static_cast<unsigned long>(sample.sampleIndex),
+                               static_cast<unsigned int>(sample.distanceCm),
+                               static_cast<unsigned int>(sample.strength),
+                               static_cast<double>(sample.lidarTempC),
+                               sample.validFrame ? 1U : 0U,
+                               sample.signalOk ? 1U : 0U,
                                static_cast<double>(sample.tempC),
                                static_cast<double>(sample.rhPct),
-                               static_cast<double>(sample.pressureHpa),
-                               static_cast<unsigned int>(sample.validMask));
+                               static_cast<double>(sample.pressureHpa));
   if (written <= 0 || written >= static_cast<int>(sizeof(rec.line))) {
     _dropped++;
     rec.valid = false;
@@ -2303,7 +2331,7 @@ void SdLogger::tick(uint32_t nowMs) {
     markUnmounted(nowMs, Status(Err::COMM_FAILURE, 0, "SD card removed"));
   }
 
-#if CO2CONTROL_HAS_ASYNC_SD
+#if TFLUNACTRL_HAS_ASYNC_SD
   if (_sdStarted) {
     _sd.poll();
     AsyncSD::RequestResult result{};
@@ -2366,7 +2394,7 @@ void SdLogger::tick(uint32_t nowMs) {
       // potentially long FAT32 free-cluster scan does not block writes.
       if (!_job.active) {
         // Exponential backoff after consecutive info timeouts:
-        // base * 2^min(streak,3)  →  30 s / 60 s / 120 s / 240 s max
+        // base * 2^min(streak,3)  â†’  30 s / 60 s / 120 s / 240 s max
         const uint32_t backoffMult = 1U << (_infoTimeoutStreak > 3U ? 3U : _infoTimeoutStreak);
         const uint32_t refreshMs = _sdInfoValid
             ? SD_INFO_REFRESH_MS
@@ -2383,7 +2411,7 @@ void SdLogger::tick(uint32_t nowMs) {
 #endif
 
   if (!_mounted) {
-#if CO2CONTROL_HAS_ASYNC_SD
+#if TFLUNACTRL_HAS_ASYNC_SD
     if (_mountStage != MountStage::IDLE) {
       const int32_t mountAge = static_cast<int32_t>(nowMs - _lastMountAttemptMs);
       if (_lastMountAttemptMs != 0U && mountAge >= 0 &&
@@ -2409,7 +2437,7 @@ void SdLogger::tick(uint32_t nowMs) {
     }
     if (_lastMountAttemptMs == 0 || (nowMs - _lastMountAttemptMs) >= retryMs) {
       _lastMountAttemptMs = nowMs;
-#if CO2CONTROL_HAS_ASYNC_SD
+#if TFLUNACTRL_HAS_ASYNC_SD
       // Defer the actual mount to processDeferred() so the blocking
       // _sd.end() + _sd.begin() calls do not stall cooperative tick.
       _deferredMount = true;
@@ -2441,7 +2469,7 @@ void SdLogger::tick(uint32_t nowMs) {
     return;
   }
 
-#if CO2CONTROL_HAS_ASYNC_SD
+#if TFLUNACTRL_HAS_ASYNC_SD
   if (budgetExceeded()) {
     finalizeTick();
     return;
@@ -2588,8 +2616,8 @@ void SdLogger::tick(uint32_t nowMs) {
 }
 
 void SdLogger::processDeferred(uint32_t nowMs) {
-#if CO2CONTROL_HAS_ASYNC_SD
-  // Phase 1: teardown — markUnmounted() defers _sd.end() to avoid blocking
+#if TFLUNACTRL_HAS_ASYNC_SD
+  // Phase 1: teardown â€” markUnmounted() defers _sd.end() to avoid blocking
   // tick.  Execute it here and yield so the FreeRTOS worker task has a full
   // loop cycle to release SPI resources before _sd.begin() re-inits the bus.
   if (_deferredTeardown) {
@@ -2600,7 +2628,7 @@ void SdLogger::processDeferred(uint32_t nowMs) {
     return;
   }
 
-  // Remount supersedes a pending mount — force teardown, then mount fresh.
+  // Remount supersedes a pending mount â€” force teardown, then mount fresh.
   if (_deferredRemount) {
     _deferredRemount = false;
     _deferredMount = true;
@@ -2630,4 +2658,4 @@ void SdLogger::processDeferred(uint32_t nowMs) {
 #endif
 }
 
-}  // namespace CO2Control
+}  // namespace TFLunaControl

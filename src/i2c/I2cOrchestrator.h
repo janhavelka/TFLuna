@@ -1,11 +1,11 @@
 #pragma once
 
-#include "CO2Control/AppSettings.h"
-#include "CO2Control/I2cRaw.h"
-#include "CO2Control/I2cScan.h"
+#include "TFLunaControl/AppSettings.h"
+#include "TFLunaControl/I2cRaw.h"
+#include "TFLunaControl/I2cScan.h"
 #include "i2c/I2cRequests.h"
 
-namespace CO2Control {
+namespace TFLunaControl {
 
 class I2cOrchestrator {
  public:
@@ -143,4 +143,4 @@ class I2cOrchestrator {
   I2cRawSnapshot _raw{};
 };
 
-}  // namespace CO2Control
+}  // namespace TFLunaControl

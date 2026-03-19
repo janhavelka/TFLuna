@@ -1,27 +1,29 @@
 #include "config/AppConfig.h"
 
-namespace CO2Control {
+namespace TFLunaControl {
 
 HardwareSettings loadHardwareSettings() {
   HardwareSettings settings{};
 
-  // Provisional custom-board mapping (from provided ESP32-S3 schematic):
-  // I2C: SDA=IO8, SCL=IO9
-  // EE871 E2: TX=IO17, RX=IO18, no EN line
-  // RS485: TX=IO17, RX=IO18, DE=IO21 (currently stubbed in firmware)
-  // SPI bus: MOSI=IO11, SCK=IO12, MISO=IO13, CS=IO10
+  // Preserved board wiring already encoded in the repo:
+  // I2C bus (RTC + SSD1315 OLED): SDA=IO8, SCL=IO9
+  // SPI bus (SD card): MOSI=IO11, SCK=IO12, MISO=IO13, CS=IO10
+  //
+  // TF-Luna UART mapping is new for this measurement firmware and is kept
+  // explicit here instead of being inferred elsewhere:
+  //   TF-Luna TX -> ESP32-S3 RX on GPIO15
+  //   TF-Luna RX -> ESP32-S3 TX on GPIO14
   settings.i2cSda = 8;
   settings.i2cScl = 9;
-  settings.e2Tx = 17;
-  settings.e2Rx = 18;
-  settings.e2En = -1;
-  settings.rs485Tx = 17;
-  settings.rs485Rx = 18;
-  settings.rs485De = 21;
   settings.spiMosi = 11;
   settings.spiSck = 12;
   settings.spiMiso = 13;
   settings.sdCs = 10;
+  settings.lidarRx = 15;
+  settings.lidarTx = 14;
+  settings.lidarUartIndex = 1;
+  settings.displayFlipX = true;
+  settings.displayFlipY = true;
 
   settings.mosfet1Pin = 35;
   // mosfet1ActiveHigh defaults to true: output LOW (off) at boot,
@@ -39,6 +41,7 @@ HardwareSettings loadHardwareSettings() {
 AppSettings loadAppSettings(const HardwareSettings& hardware) {
   AppSettings settings{};
   settings.enableSd = (hardware.sdCs >= 0);
+  settings.enableDisplay = true;
   return settings;
 }
 
@@ -46,4 +49,4 @@ StartupProfileSettings loadStartupProfileSettings() {
   return StartupProfileSettings{};
 }
 
-}  // namespace CO2Control
+}  // namespace TFLunaControl

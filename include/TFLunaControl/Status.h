@@ -1,6 +1,6 @@
 /**
  * @file Status.h
- * @brief Error handling types for CO2Control.
+ * @brief Error handling types for TFLunaControl.
  *
  * Provides a lightweight, zero-allocation error model. All error messages
  * are static string literals.
@@ -10,7 +10,7 @@
 
 #include <stdint.h>
 
-namespace CO2Control {
+namespace TFLunaControl {
 
 /**
  * @brief Error code enumeration.
@@ -59,4 +59,4 @@ struct Status {
 /// @return Status with Err::OK
 constexpr Status Ok() { return Status(Err::OK, 0, ""); }
 
-}  // namespace CO2Control
+}  // namespace TFLunaControl

@@ -4,7 +4,7 @@
 #include <new>
 #endif
 
-namespace CO2Control {
+namespace TFLunaControl {
 
 StatusLedAdapter::HealthState StatusLedAdapter::debounceHealth(HealthState target,
                                                                uint32_t nowMs,
@@ -290,4 +290,4 @@ Status StatusLedAdapter::applyHealthState() {
 }
 #endif
 
-}  // namespace CO2Control
+}  // namespace TFLunaControl

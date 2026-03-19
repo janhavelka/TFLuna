@@ -4,7 +4,7 @@
 #include <Arduino.h>
 #endif
 
-namespace CO2Control {
+namespace TFLunaControl {
 
 namespace {
 static constexpr uint32_t OUTPUT_TEST_OVERRIDE_HOLD_MS = 15000UL;
@@ -451,4 +451,4 @@ Status OutputController::setChannelTestOverride(size_t index, bool enabled, bool
   return Ok();
 }
 
-}  // namespace CO2Control
+}  // namespace TFLunaControl

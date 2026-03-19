@@ -1,17 +1,17 @@
 /**
  * @file AppSettings.h
- * @brief Boot-time software/service settings for CO2Control.
+ * @brief Boot-time software/service settings for TFLunaControl.
  */
 
 #pragma once
 
 #include <stdint.h>
 
-#ifndef CO2CONTROL_ENABLE_DISPLAY
-#define CO2CONTROL_ENABLE_DISPLAY 0
+#ifndef TFLUNACTRL_ENABLE_DISPLAY
+#define TFLUNACTRL_ENABLE_DISPLAY 0
 #endif
 
-namespace CO2Control {
+namespace TFLunaControl {
 
 /**
  * @brief Boot-time software/service configuration.
@@ -36,7 +36,7 @@ struct AppSettings {
   bool enableWeb = true;
 
   /// @brief Enable OLED display pipeline (I2C display refresh requests).
-  bool enableDisplay = (CO2CONTROL_ENABLE_DISPLAY != 0);
+  bool enableDisplay = (TFLUNACTRL_ENABLE_DISPLAY != 0);
 
   /// @brief SoftAP web server TCP port.
   uint16_t webPort = 80;
@@ -98,7 +98,7 @@ struct AppSettings {
   /// Increased to 10 s for FAT32 cards that initialise slowly via SPI.
   uint16_t sdMountTimeoutMs = 10000;
 
-  /// @brief AsyncSD generic-operation timeout (Info, Stat, Mkdir, …).
+  /// @brief AsyncSD generic-operation timeout (Info, Stat, Mkdir, â€¦).
   /// Must be long enough that an enqueued Info request is not expired
   /// while waiting behind a file-write job on slow cards.
   uint16_t sdOpTimeoutMs = 10000;
@@ -110,9 +110,9 @@ struct AppSettings {
   uint16_t sdIoChunkBytes = 256;
 
   /// @brief SPI clock frequency for SD card (Hz).
-  /// AsyncSD default is 25 MHz. 4 MHz is a conservative safe default
-  /// that works reliably with cheap/old/no-name cards and FAT32.
-  uint32_t sdSpiFrequencyHz = 10000000;
+  /// 20 MHz keeps comfortable headroom for sustained high-rate CSV logging
+  /// on this board without pushing all cards to the 25 MHz edge.
+  uint32_t sdSpiFrequencyHz = 20000000;
 
   /// @brief AsyncSD worker stall watchdog timeout (ms). 0 = disabled.
   /// Disabled by default because the FAT32 free-cluster scan in
@@ -125,4 +125,4 @@ struct AppSettings {
   uint32_t sdShutdownTimeoutMs = 5000;
 };
 
-}  // namespace CO2Control
+}  // namespace TFLunaControl

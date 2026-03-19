@@ -5,11 +5,11 @@
 
 #include "core/TimeUtil.h"
 
-#ifndef CO2CONTROL_ENABLE_DISPLAY
-#define CO2CONTROL_ENABLE_DISPLAY 0
+#ifndef TFLUNACTRL_ENABLE_DISPLAY
+#define TFLUNACTRL_ENABLE_DISPLAY 0
 #endif
 
-namespace CO2Control {
+namespace TFLunaControl {
 
 /// @brief Boot grace: delay first I2C polls to let peripherals stabilize.
 static constexpr uint32_t kBootGraceMs = 500;
@@ -92,7 +92,7 @@ Status I2cOrchestrator::begin(const HardwareSettings& config,
   _envStatus = _enabled ? Status(Err::NOT_INITIALIZED, 0, "ENV waiting first sample")
                         : Status(Err::NOT_INITIALIZED, 0, "I2C disabled");
 
-#if CO2CONTROL_ENABLE_DISPLAY
+#if TFLUNACTRL_ENABLE_DISPLAY
   _displayEnabled = (_enabled && _appSettings.enableDisplay);
 #else
   _displayEnabled = false;
@@ -158,7 +158,7 @@ void I2cOrchestrator::end() {
 
 void I2cOrchestrator::applySettings(const RuntimeSettings& settings) {
   _settings = settings;
-#if CO2CONTROL_ENABLE_DISPLAY
+#if TFLUNACTRL_ENABLE_DISPLAY
   // Push a fresh display frame promptly after any settings update
   // (notably SSID/password changes), regardless of display poll interval.
   _displayNextPollMs = 0;
@@ -278,7 +278,7 @@ void I2cOrchestrator::updateRtcSuccess(const RtcTime& time, uint32_t nowMs) {
     return;
   }
   if (firstTime) {
-    // First successful read — go straight to OK without hysteresis.
+    // First successful read â€” go straight to OK without hysteresis.
     _rtcHealth = HealthState::OK;
     _rtcStatus = Ok();
     return;
@@ -485,7 +485,7 @@ void I2cOrchestrator::processResult(const I2cResult& result, uint32_t nowMs) {
       if (!result.status.ok()) {
         _envPhase = EnvPhase::IDLE;
         if (result.status.code == Err::RESOURCE_BUSY) {
-          // Sensor busy — not a real failure, will retry next poll.
+          // Sensor busy â€” not a real failure, will retry next poll.
           _envStatus = result.status;
         } else {
           updateEnvFailure(result.status, nowMs);
@@ -500,7 +500,7 @@ void I2cOrchestrator::processResult(const I2cResult& result, uint32_t nowMs) {
       if (!result.status.ok()) {
         _envPhase = EnvPhase::IDLE;
         if (result.status.code == Err::RESOURCE_BUSY) {
-          // Measurement not ready — not a real failure, will retry next poll.
+          // Measurement not ready â€” not a real failure, will retry next poll.
           _envStatus = result.status;
         } else {
           updateEnvFailure(result.status, nowMs);
@@ -532,7 +532,7 @@ void I2cOrchestrator::processResult(const I2cResult& result, uint32_t nowMs) {
       if (_envHealth == HealthState::OK) {
         _envStatus = Ok();
       } else if (firstData) {
-        // First successful read — go straight to OK without hysteresis.
+        // First successful read â€” go straight to OK without hysteresis.
         // Hysteresis is for recovery after failures, not initial startup.
         _envHealth = HealthState::OK;
         _envStatus = Ok();
@@ -1053,4 +1053,4 @@ Status I2cOrchestrator::busStatus() const {
   return Ok();
 }
 
-}  // namespace CO2Control
+}  // namespace TFLunaControl

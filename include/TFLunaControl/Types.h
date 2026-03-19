@@ -1,6 +1,6 @@
 /**
  * @file Types.h
- * @brief Core types for CO2Control.
+ * @brief Core types for TFLunaControl.
  */
 
 #pragma once
@@ -8,7 +8,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-namespace CO2Control {
+namespace TFLunaControl {
 
 /// @brief Device identifiers used for health/status reporting.
 enum class DeviceId : uint8_t {
@@ -17,13 +17,13 @@ enum class DeviceId : uint8_t {
   SD,
   ENV,
   RTC,
-  CO2,
+  LIDAR,
+  CO2 = LIDAR,
   OUTPUTS,
   WIFI,
   WEB,
   LEDS,
   BUTTON,
-  RS485,
   COUNT
 };
 
@@ -65,6 +65,30 @@ struct RtcTime {
   bool valid = false;
 };
 
+struct LidarMeasurement {
+  uint16_t distanceCm = 0;
+  uint16_t strength = 0;
+  float temperatureC = 0.0f;
+  bool validFrame = false;
+  bool signalOk = false;
+  uint32_t capturedMs = 0;
+};
+
+struct LidarStatsSnapshot {
+  uint64_t totalFrames = 0;
+  uint64_t validSamples = 0;
+  uint64_t invalidSamples = 0;
+  uint64_t weakSamples = 0;
+  bool hasDistanceStats = false;
+  float minDistanceCm = 0.0f;
+  float maxDistanceCm = 0.0f;
+  float meanDistanceCm = 0.0f;
+  float stddevDistanceCm = 0.0f;
+  float rangeDistanceCm = 0.0f;
+  float meanStrength = 0.0f;
+  float stddevStrength = 0.0f;
+};
+
 /**
  * @brief Sensor sample with timestamps.
  */
@@ -75,6 +99,13 @@ struct Sample {
   float tempC = 0.0f;
   float rhPct = 0.0f;
   float pressureHpa = 0.0f;
+  uint32_t uptimeMs = 0;  ///< Monotonic uptime at sample capture
+  uint32_t sampleIndex = 0;
+  uint16_t distanceCm = 0;
+  uint16_t strength = 0;
+  float lidarTempC = 0.0f;
+  bool validFrame = false;
+  bool signalOk = false;
   uint8_t validMask = 0;  ///< OR of SampleValidMask
 };
 
@@ -88,4 +119,4 @@ struct Event {
   char msg[64] = {0};
 };
 
-}  // namespace CO2Control
+}  // namespace TFLunaControl

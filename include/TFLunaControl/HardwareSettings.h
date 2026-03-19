@@ -1,6 +1,6 @@
 /**
  * @file HardwareSettings.h
- * @brief Hardware settings for CO2Control.
+ * @brief Hardware settings for TFLunaControl.
  */
 
 #pragma once
@@ -8,9 +8,9 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "CO2Control/Status.h"
+#include "TFLunaControl/Status.h"
 
-namespace CO2Control {
+namespace TFLunaControl {
 
 /// @brief Optional board-level callback used to power-cycle I2C peripherals.
 /// @param nowMs Current monotonic time in milliseconds.
@@ -19,7 +19,7 @@ namespace CO2Control {
 using I2cPowerCycleHook = Status (*)(uint32_t nowMs, void* userContext);
 
 /**
- * @brief Boot-time hardware configuration for CO2Control initialization.
+ * @brief Boot-time hardware configuration for TFLunaControl initialization.
  *
  * All pin values default to -1 (disabled). Define only the pins your
  * application uses. Board-specific values belong in application code.
@@ -87,13 +87,13 @@ struct HardwareSettings {
   static constexpr size_t WEB_MAX_EVENT_COUNT_PSRAM = 256;
 
   /// @brief Build-time web graph scratch RAM hard cap.
-  static constexpr size_t WEB_MAX_GRAPH_SCRATCH_BYTES = 8U * 1024U;
+  static constexpr size_t WEB_MAX_GRAPH_SCRATCH_BYTES = 16U * 1024U;
 
   /// @brief Build-time web events scratch RAM hard cap.
   static constexpr size_t WEB_MAX_EVENT_SCRATCH_BYTES = 8U * 1024U;
 
   /// @brief Build-time total web scratch RAM hard cap.
-  static constexpr size_t WEB_MAX_TOTAL_SCRATCH_BYTES = 16U * 1024U;
+  static constexpr size_t WEB_MAX_TOTAL_SCRATCH_BYTES = 24U * 1024U;
 
   /// @brief Build-time max I2C payload bytes for request/result buffers.
   static constexpr size_t I2C_PAYLOAD_BYTES = 16;
@@ -198,6 +198,21 @@ struct HardwareSettings {
   /// @brief Optional EE871 enable/power pin. Set to -1 if not used.
   int e2En = -1;
 
+  /// @brief TF-Luna UART RX pin on the ESP32. Connect TF-Luna TX here.
+  int lidarRx = -1;
+
+  /// @brief TF-Luna UART TX pin on the ESP32. Connect TF-Luna RX here.
+  int lidarTx = -1;
+
+  /// @brief Hardware UART index used for TF-Luna on ESP32 targets.
+  uint8_t lidarUartIndex = 1;
+
+  /// @brief OLED horizontal orientation flag. True mirrors the display on X.
+  bool displayFlipX = false;
+
+  /// @brief OLED vertical orientation flag. True mirrors the display on Y.
+  bool displayFlipY = false;
+
   /// @brief Button GPIO pin. Set to -1 to disable button.
   int buttonPin = -1;
 
@@ -258,15 +273,6 @@ struct HardwareSettings {
   /// @brief Relay output 2 active-high flag.
   bool relay2ActiveHigh = true;
 
-  /// @brief RS485 UART RX pin. Set to -1 to disable RS485.
-  int rs485Rx = -1;
-
-  /// @brief RS485 UART TX pin. Set to -1 to disable RS485.
-  int rs485Tx = -1;
-
-  /// @brief RS485 driver enable pin. Set to -1 if not used.
-  int rs485De = -1;
-
 };
 
-}  // namespace CO2Control
+}  // namespace TFLunaControl

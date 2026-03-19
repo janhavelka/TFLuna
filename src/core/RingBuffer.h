@@ -2,7 +2,7 @@
 
 #include <stddef.h>
 
-namespace CO2Control {
+namespace TFLunaControl {
 
 /**
  * @brief Fixed-size ring buffer.
@@ -74,4 +74,4 @@ class RingBuffer {
   size_t _count = 0;
 };
 
-}  // namespace CO2Control
+}  // namespace TFLunaControl

@@ -1,9 +1,9 @@
-#include "CO2Control/CO2Control.h"
+#include "TFLunaControl/TFLunaControl.h"
 
-#if __has_include("CO2Control/Version.h")
-#include "CO2Control/Version.h"
+#if __has_include("TFLunaControl/Version.h")
+#include "TFLunaControl/Version.h"
 #else
-namespace CO2Control { static constexpr const char* VERSION = "dev"; }
+namespace TFLunaControl { static constexpr const char* VERSION = "dev"; }
 #endif
 
 #include <math.h>
@@ -20,7 +20,7 @@ namespace CO2Control { static constexpr const char* VERSION = "dev"; }
 #include "core/Scheduler.h"
 #include "core/SystemClock.h"
 #include "devices/ButtonManager.h"
-#include "devices/Co2Adapter.h"
+#include "devices/LidarAdapter.h"
 #include "devices/EnvSensorAdapter.h"
 #include "devices/RtcAdapter.h"
 #include "devices/StatusLedAdapter.h"
@@ -43,7 +43,7 @@ namespace CO2Control { static constexpr const char* VERSION = "dev"; }
 #endif
 #endif
 
-namespace CO2Control {
+namespace TFLunaControl {
 
 enum EventCode : uint16_t {
   EVENT_BOOT = 1,
@@ -57,7 +57,7 @@ enum EventCode : uint16_t {
   EVENT_FACTORY_RESET_FAILED = 9,
   EVENT_OUTPUT_OVERRIDE = 10,
   EVENT_I2C_RECOVERY_REQUESTED = 11,
-  EVENT_CO2_RECOVERY_REQUESTED = 12,
+  EVENT_LIDAR_RECOVERY_REQUESTED = 12,
   EVENT_OUTPUT_TEST = 13,
   EVENT_ENV_HEALTH_CHANGE = 14,
   EVENT_RTC_HEALTH_CHANGE = 15
@@ -82,8 +82,8 @@ enum class AppCommandType : uint8_t {
   SET_OUTPUT_OVERRIDE,
   SET_OUTPUT_CHANNEL_TEST,
   RECOVER_I2C,
-  RECOVER_CO2,
-  PROBE_CO2,
+  RECOVER_LIDAR,
+  PROBE_LIDAR,
   PROBE_SD,
   SCAN_I2C,
   RAW_I2C
@@ -107,14 +107,14 @@ struct AppCommand {
   bool persist = false;
 };
 
-struct CO2Control::Impl {
+struct TFLunaControl::Impl {
   DynamicRingBuffer<Sample> samples;
   DynamicRingBuffer<Event> events;
   PeriodicTimer sampleTimer;
   CommandQueue<AppCommand, HardwareSettings::COMMAND_QUEUE_CAPACITY> commandQueue;
 
   EnvSensorAdapter env;
-  Co2Adapter co2;
+  LidarAdapter lidar;
   RtcAdapter rtc;
   I2cTask i2cTask;
   I2cOrchestrator i2cOrchestrator;
@@ -170,7 +170,7 @@ struct CO2Control::Impl {
   uint32_t lastValidEnvMs = 0;
   uint32_t lastI2cRecoveryCount = 0;
 
-  // Cached heap / stack metrics — refreshed once per second to avoid
+  // Cached heap / stack metrics ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â refreshed once per second to avoid
   // calling expensive heap_caps_get_largest_free_block / stack watermark
   // APIs on every tick.
   uint32_t lastHeapRefreshMs = 0;
@@ -208,7 +208,7 @@ struct CO2Control::Impl {
   uint32_t stateMutexTimeoutMs = 10;
   DeviceStatus statusScratch[DEVICE_COUNT]{};
 
-  // Deferred blocking operations — executed in processDeferred(), outside tick timing.
+  // Deferred blocking operations ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â executed in processDeferred(), outside tick timing.
   bool nvsSavePending = false;
   RuntimeSettings nvsSavePayload{};
   bool deferredApStop = false;
@@ -330,7 +330,7 @@ struct CO2Control::Impl {
 };
 
 static const char* kDeviceNames[DEVICE_COUNT] = {
-    "system", "i2c_bus", "sd", "env", "rtc", "co2", "outputs", "wifi", "web", "leds", "button", "rs485"};
+    "system", "i2c_bus", "sd", "env", "rtc", "lidar", "outputs", "wifi", "web", "leds", "button"};
 
 static void updateDeviceStatus(DeviceStatus& ds, HealthState health, const Status& st, uint32_t nowMs) {
   ds.health = health;
@@ -345,21 +345,16 @@ static void updateDeviceStatus(DeviceStatus& ds, HealthState health, const Statu
 }
 
 static void applyDefaultSsid(RuntimeSettings& settings) {
-  if (strncmp(settings.apSsid, "CO2Control-XXXX", sizeof(settings.apSsid)) != 0) {
+  if (strncmp(settings.apSsid, "TFLuna-XXXX", sizeof(settings.apSsid)) != 0) {
     return;
   }
 #ifdef ARDUINO
-  // Read MAC from eFuse directly — works before WiFi.begin().
+  // Read MAC from eFuse directly ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â works before WiFi.begin().
   // WiFi.macAddress() returns all-zeros until the radio is started.
   uint8_t mac[6] = {0};
   esp_read_mac(mac, ESP_MAC_WIFI_STA);
-  snprintf(settings.apSsid, sizeof(settings.apSsid), "CO2Control-%02X%02X", mac[4], mac[5]);
+  snprintf(settings.apSsid, sizeof(settings.apSsid), "TFLuna-%02X%02X", mac[4], mac[5]);
 #endif
-}
-
-/// @brief True when RS485 hardware pins are not configured.
-static inline bool isRs485Disabled(const HardwareSettings& cfg) {
-  return cfg.rs485Rx < 0 && cfg.rs485Tx < 0;
 }
 
 static HealthState worstHealth(const DeviceStatus* devices, size_t count,
@@ -452,7 +447,7 @@ static Status validateAppSettings(const AppSettings& appSettings) {
   return Ok();
 }
 
-void CO2Control::pushEvent(uint32_t nowMs, uint16_t code, const char* msg) {
+void TFLunaControl::pushEvent(uint32_t nowMs, uint16_t code, const char* msg) {
   if (_impl == nullptr) {
     return;
   }
@@ -479,11 +474,11 @@ void CO2Control::pushEvent(uint32_t nowMs, uint16_t code, const char* msg) {
   }
 }
 
-Status CO2Control::begin(const HardwareSettings& config) {
+Status TFLunaControl::begin(const HardwareSettings& config) {
   return begin(config, AppSettings());
 }
 
-Status CO2Control::begin(const HardwareSettings& config, const AppSettings& appSettings) {
+Status TFLunaControl::begin(const HardwareSettings& config, const AppSettings& appSettings) {
   if (_initialized) {
     return Status(Err::RESOURCE_BUSY, 0, "already initialized");
   }
@@ -551,9 +546,6 @@ Status CO2Control::begin(const HardwareSettings& config, const AppSettings& appS
     _deviceStatus[i].id = static_cast<DeviceId>(i);
     _deviceStatus[i].name = kDeviceNames[i];
     _deviceStatus[i].health = HealthState::UNKNOWN;
-  }
-  if (isRs485Disabled(_config)) {
-    _deviceStatus[static_cast<size_t>(DeviceId::RS485)].optional = true;
   }
 
   _impl->bootMs = 0;
@@ -659,7 +651,7 @@ Status CO2Control::begin(const HardwareSettings& config, const AppSettings& appS
   _impl->commandQueue.clear();
   _impl->ledHealthDebounce = StatusLedAdapter::HealthDebounceState{};
 
-  _impl->sampleTimer.setInterval(_settings.sampleIntervalSec * 1000UL);
+  _impl->sampleTimer.setInterval(_settings.sampleIntervalMs);
 
   const Status outputsBeginSt = _impl->outputs.begin(_config, _settings);
   _impl->outputsLastStatus = outputsBeginSt;
@@ -683,9 +675,9 @@ Status CO2Control::begin(const HardwareSettings& config, const AppSettings& appS
 
   Status envSt = _impl->env.begin(_config, &_impl->i2cOrchestrator);
   updateDeviceStatus(_deviceStatus[static_cast<size_t>(DeviceId::ENV)], _impl->env.health(), envSt, 0);
-  _impl->co2.applySettings(_settings, 0);
-  Status co2St = _impl->co2.begin(_config);
-  updateDeviceStatus(_deviceStatus[static_cast<size_t>(DeviceId::CO2)], _impl->co2.health(), co2St, 0);
+  _impl->lidar.applySettings(_settings, 0);
+  Status co2St = _impl->lidar.begin(_config);
+  updateDeviceStatus(_deviceStatus[static_cast<size_t>(DeviceId::LIDAR)], _impl->lidar.health(), co2St, 0);
 
   Status sdSt = _impl->sdLogger.begin(_config, _appSettings, _settings);
   HealthState sdHealth =
@@ -735,7 +727,7 @@ Status CO2Control::begin(const HardwareSettings& config, const AppSettings& appS
   return Ok();
 }
 
-void CO2Control::end() {
+void TFLunaControl::end() {
   if (!_initialized) {
     return;
   }
@@ -755,7 +747,7 @@ void CO2Control::end() {
   _initialized = false;
 }
 
-void CO2Control::tick(uint32_t nowMs) {
+void TFLunaControl::tick(uint32_t nowMs) {
   if (!_initialized) {
     return;
   }
@@ -798,9 +790,9 @@ void CO2Control::tick(uint32_t nowMs) {
   RuntimeSettings currentSettings = getSettings();
   if (_impl->button.consumeMultiPress()) {
     RuntimeSettings updated = currentSettings;
-    strncpy(updated.apSsid, "CO2Control-XXXX", sizeof(updated.apSsid) - 1);
+    strncpy(updated.apSsid, "TFLuna-XXXX", sizeof(updated.apSsid) - 1);
     updated.apSsid[sizeof(updated.apSsid) - 1] = '\0';
-    strncpy(updated.apPass, "co2control", sizeof(updated.apPass) - 1);
+    strncpy(updated.apPass, "tflunactrl", sizeof(updated.apPass) - 1);
     updated.apPass[sizeof(updated.apPass) - 1] = '\0';
     applyDefaultSsid(updated);
     updateSettings(updated, true);
@@ -864,17 +856,17 @@ void CO2Control::tick(uint32_t nowMs) {
     } else if (command.type == AppCommandType::RECOVER_I2C) {
       pushEvent(nowMs, EVENT_I2C_RECOVERY_REQUESTED, "i2c recovery requested");
       commandStatus = _impl->i2cOrchestrator.queueBusRecover(nowMs);
-    } else if (command.type == AppCommandType::RECOVER_CO2) {
-      pushEvent(nowMs, EVENT_CO2_RECOVERY_REQUESTED, "co2 recovery requested");
-      commandStatus = _impl->co2.forceRecover(nowMs);
-    } else if (command.type == AppCommandType::PROBE_CO2) {
+    } else if (command.type == AppCommandType::RECOVER_LIDAR) {
+      pushEvent(nowMs, EVENT_LIDAR_RECOVERY_REQUESTED, "lidar recovery requested");
+      commandStatus = _impl->lidar.forceRecover(nowMs);
+    } else if (command.type == AppCommandType::PROBE_LIDAR) {
       Sample probeSample{};
       const uint32_t co2PhaseStartUs = SystemClock::nowUs();
-      commandStatus = _impl->co2.readOnce(probeSample, nowMs);
+      commandStatus = _impl->lidar.probeOnce(probeSample, nowMs);
       const uint32_t co2ElapsedUs = (SystemClock::nowUs() - co2PhaseStartUs);
       tickPhaseCo2Us += co2ElapsedUs;
       tickPhaseCmdOverlapUs += co2ElapsedUs;
-      updateStatusLocked(DeviceId::CO2, _impl->co2.health(), commandStatus);
+      updateStatusLocked(DeviceId::LIDAR, _impl->lidar.health(), commandStatus);
     } else if (command.type == AppCommandType::PROBE_SD) {
       commandStatus = _impl->sdLogger.probe(nowMs);
       updateStatusLocked(DeviceId::SD, commandStatus.ok() ? HealthState::OK : HealthState::DEGRADED, commandStatus);
@@ -962,6 +954,8 @@ void CO2Control::tick(uint32_t nowMs) {
 
   if (_impl->sampleTimer.isDue(nowMs)) {
     Sample sample{};
+    sample.uptimeMs = uptimeMs;
+    sample.sampleIndex = _impl->sampleCount + 1U;
 
     RtcTime rtcTime;
     const uint32_t rtcPhaseStartUs = SystemClock::nowUs();
@@ -995,10 +989,10 @@ void CO2Control::tick(uint32_t nowMs) {
     }
 
     const uint32_t co2PhaseStartUs = SystemClock::nowUs();
-    Status co2St = _impl->co2.readOnce(sample, nowMs);
+    Status co2St = _impl->lidar.readOnce(sample, nowMs);
     tickPhaseCo2Us += (SystemClock::nowUs() - co2PhaseStartUs);
-    const HealthState co2Health = _impl->co2.health();
-    if ((sample.validMask & VALID_CO2) != 0U && isfinite(sample.co2ppm)) {
+    const HealthState co2Health = _impl->lidar.health();
+    if (sample.signalOk && sample.distanceCm > 0U) {
       _impl->lastValidCo2Ms = nowMs;
     }
 
@@ -1006,7 +1000,7 @@ void CO2Control::tick(uint32_t nowMs) {
     if (_impl->lockState()) {
       updateDeviceStatus(_deviceStatus[static_cast<size_t>(DeviceId::RTC)], rtcHealth, rtcSt, nowMs);
       updateDeviceStatus(_deviceStatus[static_cast<size_t>(DeviceId::ENV)], envHealth, envSt, nowMs);
-      updateDeviceStatus(_deviceStatus[static_cast<size_t>(DeviceId::CO2)], co2Health, co2St, nowMs);
+      updateDeviceStatus(_deviceStatus[static_cast<size_t>(DeviceId::LIDAR)], co2Health, co2St, nowMs);
       _impl->samples.push(sample);
       _impl->unlockState();
     }
@@ -1038,6 +1032,12 @@ void CO2Control::tick(uint32_t nowMs) {
     }
   }
 
+  {
+    const uint32_t lidarServiceStartUs = SystemClock::nowUs();
+    _impl->lidar.tick(nowMs);
+    tickPhaseCo2Us += (SystemClock::nowUs() - lidarServiceStartUs);
+  }
+
   if (_appSettings.enableSd) {
     const uint32_t sdPhaseStartUs = SystemClock::nowUs();
     _impl->sdLogger.tick(nowMs);
@@ -1059,9 +1059,9 @@ void CO2Control::tick(uint32_t nowMs) {
     latest = &empty;
   }
   const bool latestCo2Valid =
-      ((latest->validMask & VALID_CO2) != 0U) && isfinite(latest->co2ppm);
+      latest->signalOk && (latest->distanceCm > 0U);
   _impl->i2cOrchestrator.setDisplayCo2Snapshot(
-      latest->co2ppm, latestCo2Valid, _impl->lastSampleMs);
+      static_cast<float>(latest->distanceCm), latestCo2Valid, _impl->lastSampleMs);
   _impl->outputs.tick(*latest, nowMs);
   const uint8_t outputPresentMask = _impl->outputs.presentMask();
   uint8_t outputMask = 0;
@@ -1107,7 +1107,7 @@ void CO2Control::tick(uint32_t nowMs) {
     const uint8_t stations = _impl->web.stationCount();
     const size_t webClients = _impl->web.webClientCount();
     const bool recentUiActivity = _impl->web.hasRecentUiActivity(nowMs, 3000U);
-    // 3 s grace period after last station seen — the ESP32 AP inactive
+    // 3 s grace period after last station seen ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â the ESP32 AP inactive
     // timeout (120 s) already provides the main hysteresis.
     const bool stationConnected =
         (stations > 0U) ||
@@ -1233,7 +1233,7 @@ void CO2Control::tick(uint32_t nowMs) {
       oH = HealthState::FAULT;
     } else if (tickSettings.outputsEnabled &&
                tickSettings.outputValveChannel != RuntimeSettings::OUTPUT_CHANNEL_DISABLED) {
-      uint64_t staleWindow = static_cast<uint64_t>(tickSettings.sampleIntervalSec) * 2000ULL;
+      uint64_t staleWindow = static_cast<uint64_t>(tickSettings.sampleIntervalMs) * 2ULL;
       if (staleWindow > 0xFFFFFFFFULL) {
         staleWindow = 0xFFFFFFFFULL;
       }
@@ -1247,7 +1247,7 @@ void CO2Control::tick(uint32_t nowMs) {
       if (lastDataMs == 0 ||
           static_cast<int32_t>(nowMs - lastDataMs) > static_cast<int32_t>(staleWindowMs)) {
         oH = HealthState::DEGRADED;
-        const char* staleMsg = "CO2 data stale";
+        const char* staleMsg = "LiDAR data stale";
         if (source == OutputSource::TEMP) {
           staleMsg = "Temp data stale";
         } else if (source == OutputSource::RH) {
@@ -1307,7 +1307,7 @@ void CO2Control::tick(uint32_t nowMs) {
     }
   }
 
-  // LEDs, Button, RS485
+  // LEDs, Button
   dsHealth[static_cast<size_t>(DeviceId::LEDS)] =
       _impl->ledOk ? HealthState::OK : HealthState::DEGRADED;
   dsStatus[static_cast<size_t>(DeviceId::LEDS)] =
@@ -1315,28 +1315,18 @@ void CO2Control::tick(uint32_t nowMs) {
   dsHealth[static_cast<size_t>(DeviceId::BUTTON)] =
       _impl->buttonEnabled ? HealthState::OK : HealthState::DEGRADED;
   dsStatus[static_cast<size_t>(DeviceId::BUTTON)] = _impl->buttonLastStatus;
-  // RS485: report based on hardware config — mark disabled when pins not set.
-  if (isRs485Disabled(_config)) {
-    dsHealth[static_cast<size_t>(DeviceId::RS485)] = HealthState::DEGRADED;
-    dsStatus[static_cast<size_t>(DeviceId::RS485)] = Status(Err::NOT_INITIALIZED, 0, "RS485 disabled (no pins)");
-  } else {
-    // When RS485 pins are configured but no driver is implemented yet,
-    // report DEGRADED until a proper adapter exists.
-    dsHealth[static_cast<size_t>(DeviceId::RS485)] = HealthState::DEGRADED;
-    dsStatus[static_cast<size_t>(DeviceId::RS485)] = Status(Err::NOT_INITIALIZED, 0, "RS485 not implemented");
-  }
 
   // --- Apply all device updates under one lock ---
   size_t statusCount = 0;
   bool haveStatusSnapshot = false;
   if (_impl->lockState()) {
     for (size_t i = 0; i < DEVICE_COUNT; ++i) {
-      // Only update devices that were evaluated above (skip SYSTEM — set later).
+      // Only update devices that were evaluated above (skip SYSTEM ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â set later).
       if (static_cast<DeviceId>(i) == DeviceId::SYSTEM) continue;
-      // Skip RTC/ENV/CO2 — they are updated during sample acquisition.
+      // Skip RTC/ENV/CO2 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â they are updated during sample acquisition.
       if (static_cast<DeviceId>(i) == DeviceId::RTC) continue;
       if (static_cast<DeviceId>(i) == DeviceId::ENV) continue;
-      if (static_cast<DeviceId>(i) == DeviceId::CO2) continue;
+      if (static_cast<DeviceId>(i) == DeviceId::LIDAR) continue;
       if (dsHealth[i] == HealthState::UNKNOWN && dsStatus[i].ok()) continue;
       updateDeviceStatus(_deviceStatus[i], dsHealth[i], dsStatus[i], nowMs);
     }
@@ -1475,6 +1465,8 @@ void CO2Control::tick(uint32_t nowMs) {
   nextStatus.fwVersion = VERSION;
 
   nextStatus.uptimeMs = uptimeMs;
+  nextStatus.rtcTimeActive = false;
+  nextStatus.timeSource = "uptime";
   nextStatus.tickLastDurationUs = _impl->tickDurationUs;
   nextStatus.tickMaxDurationUs = _impl->tickMaxDurationUs;
   nextStatus.tickMeanDurationUs = (_impl->tickCount == 0) ? 0 : static_cast<uint32_t>(_impl->tickTotalDurationUs / _impl->tickCount);
@@ -1506,6 +1498,20 @@ void CO2Control::tick(uint32_t nowMs) {
   nextStatus.webThrottled = _impl->webThrottled;
   nextStatus.webSkipCount = _impl->webSkipCount;
   nextStatus.webOverrunBurst = _impl->webOverrunBurst;
+  nextStatus.lidarFramesParsed = _impl->lidar.framesParsed();
+  nextStatus.lidarChecksumErrors = _impl->lidar.checksumErrors();
+  nextStatus.lidarSyncLossCount = _impl->lidar.syncLossCount();
+  nextStatus.lidarStats = _impl->lidar.statsSnapshot();
+  LidarMeasurement latestLidar{};
+  if (_impl->lidar.latestMeasurement(latestLidar)) {
+    nextStatus.lidar = latestLidar;
+    nextStatus.lidarLastFrameMs = latestLidar.capturedMs;
+    nextStatus.lidarFrameAgeMs = nowMs - latestLidar.capturedMs;
+  } else {
+    nextStatus.lidar = LidarMeasurement{};
+    nextStatus.lidarLastFrameMs = 0U;
+    nextStatus.lidarFrameAgeMs = 0U;
+  }
   nextStatus.lastStatus = Ok();
   nextStatus.logLastErrorAgeMs = (nextStatus.logLastErrorMs == 0)
                                      ? 0
@@ -1544,6 +1550,11 @@ void CO2Control::tick(uint32_t nowMs) {
   nextStatus.psramFreeBytes = _impl->cachedPsramFreeBytes;
   nextStatus.psramMinFreeBytes = _impl->cachedPsramMinFreeBytes;
   nextStatus.psramMaxAllocBytes = _impl->cachedPsramMaxAllocBytes;
+
+  if (latest != nullptr && latest->tsLocal[0] != '\0') {
+    nextStatus.rtcTimeActive = true;
+    nextStatus.timeSource = "rtc";
+  }
 
   const bool displayLoggingEnabled = _appSettings.enableSd &&
                                      (tickSettings.logDailyEnabled || tickSettings.logAllEnabled);
@@ -1768,12 +1779,12 @@ void CO2Control::tick(uint32_t nowMs) {
   }
 }
 
-void CO2Control::processDeferred() {
+void TFLunaControl::processDeferred() {
   if (!_initialized || !_impl) {
     return;
   }
 
-  // WiFi stop takes priority — cancel any pending start when also stopping.
+  // WiFi stop takes priority ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â cancel any pending start when also stopping.
   if (_impl->deferredApStop) {
     _impl->deferredApStop = false;
     _impl->deferredApStart = false;
@@ -1806,11 +1817,11 @@ void CO2Control::processDeferred() {
     }
   }
 
-  // Deferred SD mount/remount — _sd.end() and _sd.begin() block for
+  // Deferred SD mount/remount ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â _sd.end() and _sd.begin() block for
   // hundreds of milliseconds and must not run inside tick timing.
   _impl->sdLogger.processDeferred(_impl->lastNowMs);
 
-  // Heap / stack metrics — refreshed at 1 Hz.  ESP.getMaxAllocHeap()
+  // Heap / stack metrics ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â refreshed at 1 Hz.  ESP.getMaxAllocHeap()
   // calls heap_caps_get_largest_free_block() which walks the entire free
   // block list (0.5-5+ ms depending on heap fragmentation).
   // uxTaskGetStackHighWaterMark() scans the stack region (0.1-0.5 ms).
@@ -1837,7 +1848,7 @@ void CO2Control::processDeferred() {
 #endif
 
   // WS broadcast runs here because AsyncTCP's tcp_write / tcp_output use
-  // tcpip_api_call() — a synchronous cross-thread call to the lwIP task.
+  // tcpip_api_call() ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â a synchronous cross-thread call to the lwIP task.
   // When the lwIP thread is busy (WiFi events, TCP retransmissions,
   // incoming packets), the calling thread blocks for 100-340 ms.
   // Running this outside tick timing keeps the cooperative tick budget clean.
@@ -1846,7 +1857,7 @@ void CO2Control::processDeferred() {
   }
 }
 
-RuntimeSettings CO2Control::getSettings() const {
+RuntimeSettings TFLunaControl::getSettings() const {
   if (!_impl) {
     return RuntimeSettings{};
   }
@@ -1858,7 +1869,7 @@ RuntimeSettings CO2Control::getSettings() const {
   return out;
 }
 
-SystemStatus CO2Control::getSystemStatus() const {
+SystemStatus TFLunaControl::getSystemStatus() const {
   if (!_impl) {
     return SystemStatus{};
   }
@@ -1870,7 +1881,7 @@ SystemStatus CO2Control::getSystemStatus() const {
   return out;
 }
 
-bool CO2Control::tryGetStatusSnapshot(SystemStatus& outStatus, Sample& outLatest, bool& outHasLatest) const {
+bool TFLunaControl::tryGetStatusSnapshot(SystemStatus& outStatus, Sample& outLatest, bool& outHasLatest) const {
   outHasLatest = false;
   if (!_impl) {
     return false;
@@ -1890,7 +1901,7 @@ bool CO2Control::tryGetStatusSnapshot(SystemStatus& outStatus, Sample& outLatest
   return true;
 }
 
-const DeviceStatus& CO2Control::getDeviceStatus(DeviceId id) const {
+const DeviceStatus& TFLunaControl::getDeviceStatus(DeviceId id) const {
   const size_t idx = static_cast<size_t>(id);
   if (idx >= DEVICE_COUNT) {
     return _deviceStatus[0];
@@ -1898,7 +1909,7 @@ const DeviceStatus& CO2Control::getDeviceStatus(DeviceId id) const {
   return _deviceStatus[idx];
 }
 
-bool CO2Control::tryGetSettingsSnapshot(RuntimeSettings& out) const {
+bool TFLunaControl::tryGetSettingsSnapshot(RuntimeSettings& out) const {
   if (!_impl) {
     return false;
   }
@@ -1914,7 +1925,7 @@ bool CO2Control::tryGetSettingsSnapshot(RuntimeSettings& out) const {
   return true;
 }
 
-bool CO2Control::tryCopyDeviceStatuses(DeviceStatus* out, size_t max, size_t& outCount) const {
+bool TFLunaControl::tryCopyDeviceStatuses(DeviceStatus* out, size_t max, size_t& outCount) const {
   outCount = 0;
   if (!out || max == 0 || !_impl) {
     return false;
@@ -1933,7 +1944,7 @@ bool CO2Control::tryCopyDeviceStatuses(DeviceStatus* out, size_t max, size_t& ou
   return true;
 }
 
-bool CO2Control::getLatestSample(Sample& out) const {
+bool TFLunaControl::getLatestSample(Sample& out) const {
   if (!_impl) {
     return false;
   }
@@ -1950,7 +1961,7 @@ bool CO2Control::getLatestSample(Sample& out) const {
   return true;
 }
 
-size_t CO2Control::copySamples(Sample* out, size_t max, bool oldestFirst) const {
+size_t TFLunaControl::copySamples(Sample* out, size_t max, bool oldestFirst) const {
   if (!_impl) {
     return 0;
   }
@@ -1962,7 +1973,7 @@ size_t CO2Control::copySamples(Sample* out, size_t max, bool oldestFirst) const 
   return copied;
 }
 
-bool CO2Control::tryCopySamples(Sample* out, size_t max, bool oldestFirst, size_t& outCount) const {
+bool TFLunaControl::tryCopySamples(Sample* out, size_t max, bool oldestFirst, size_t& outCount) const {
   outCount = 0;
   if (!_impl) {
     return false;
@@ -1977,7 +1988,7 @@ bool CO2Control::tryCopySamples(Sample* out, size_t max, bool oldestFirst, size_
   return true;
 }
 
-bool CO2Control::tryCopyEvents(Event* out, size_t max, bool oldestFirst, size_t& outCount) const {
+bool TFLunaControl::tryCopyEvents(Event* out, size_t max, bool oldestFirst, size_t& outCount) const {
   outCount = 0;
   if (!_impl || out == nullptr || max == 0) {
     return false;
@@ -1992,7 +2003,7 @@ bool CO2Control::tryCopyEvents(Event* out, size_t max, bool oldestFirst, size_t&
   return true;
 }
 
-Status CO2Control::updateSettings(const RuntimeSettings& settings, bool persist, const char* changeHint) {
+Status TFLunaControl::updateSettings(const RuntimeSettings& settings, bool persist, const char* changeHint) {
   if (!_initialized) {
     return Status(Err::NOT_INITIALIZED, 0, "not initialized");
   }
@@ -2014,13 +2025,13 @@ Status CO2Control::updateSettings(const RuntimeSettings& settings, bool persist,
   _settings = normalized;
   _impl->unlockState();
 
-  _impl->sampleTimer.setInterval(normalized.sampleIntervalSec * 1000UL);
+  _impl->sampleTimer.setInterval(normalized.sampleIntervalMs);
   _impl->sampleTimer.reset(_impl->lastNowMs);
   _impl->outputs.applySettings(normalized);
   _impl->sdLogger.applySettings(normalized);
   _impl->i2cTask.applySettings(normalized, _impl->lastNowMs);
   _impl->i2cOrchestrator.applySettings(normalized);
-  _impl->co2.applySettings(normalized, _impl->lastNowMs);
+  _impl->lidar.applySettings(normalized, _impl->lastNowMs);
 
   if (persist && _appSettings.enableNvs) {
     // Defer NVS flash write to processDeferred() so it does not block tick().
@@ -2057,7 +2068,7 @@ Status CO2Control::updateSettings(const RuntimeSettings& settings, bool persist,
   return Ok();
 }
 
-Status CO2Control::factoryResetSettings(bool persist) {
+Status TFLunaControl::factoryResetSettings(bool persist) {
   RuntimeSettings defaults;
   defaults.restoreDefaults();
   applyDefaultSsid(defaults);
@@ -2070,7 +2081,7 @@ Status CO2Control::factoryResetSettings(bool persist) {
   return st;
 }
 
-Status CO2Control::setRtcTime(const RtcTime& time) {
+Status TFLunaControl::setRtcTime(const RtcTime& time) {
   if (!_initialized) {
     return Status(Err::NOT_INITIALIZED, 0, "not initialized");
   }
@@ -2110,14 +2121,14 @@ static bool isOutputChannelConfigured(const HardwareSettings& config, size_t ind
   }
 }
 
-Status CO2Control::remountSd() {
+Status TFLunaControl::remountSd() {
   if (!_initialized) {
     return Status(Err::NOT_INITIALIZED, 0, "not initialized");
   }
   return _impl->sdLogger.remount(_impl->lastNowMs);
 }
 
-Status CO2Control::enqueueApplySettings(const RuntimeSettings& settings,
+Status TFLunaControl::enqueueApplySettings(const RuntimeSettings& settings,
                                         bool persist,
                                         const char* changeHint) {
   if (!_initialized || !_impl) {
@@ -2145,7 +2156,7 @@ Status CO2Control::enqueueApplySettings(const RuntimeSettings& settings,
   return Ok();
 }
 
-Status CO2Control::enqueueSetWifiApEnabled(bool enabled) {
+Status TFLunaControl::enqueueSetWifiApEnabled(bool enabled) {
   if (!_initialized || !_impl) {
     return Status(Err::NOT_INITIALIZED, 0, "not initialized");
   }
@@ -2161,7 +2172,7 @@ Status CO2Control::enqueueSetWifiApEnabled(bool enabled) {
   return Ok();
 }
 
-Status CO2Control::enqueueSetRtcTime(const RtcTime& time) {
+Status TFLunaControl::enqueueSetRtcTime(const RtcTime& time) {
   if (!_initialized || !_impl) {
     return Status(Err::NOT_INITIALIZED, 0, "not initialized");
   }
@@ -2177,7 +2188,7 @@ Status CO2Control::enqueueSetRtcTime(const RtcTime& time) {
   return Ok();
 }
 
-Status CO2Control::enqueueRemountSd() {
+Status TFLunaControl::enqueueRemountSd() {
   if (!_initialized || !_impl) {
     return Status(Err::NOT_INITIALIZED, 0, "not initialized");
   }
@@ -2192,7 +2203,7 @@ Status CO2Control::enqueueRemountSd() {
   return Ok();
 }
 
-Status CO2Control::enqueueSetOutputOverride(OutputOverrideMode mode) {
+Status TFLunaControl::enqueueSetOutputOverride(OutputOverrideMode mode) {
   if (!_initialized || !_impl) {
     return Status(Err::NOT_INITIALIZED, 0, "not initialized");
   }
@@ -2208,7 +2219,7 @@ Status CO2Control::enqueueSetOutputOverride(OutputOverrideMode mode) {
   return Ok();
 }
 
-Status CO2Control::enqueueSetOutputChannelTest(size_t index, bool enabled, bool state) {
+Status TFLunaControl::enqueueSetOutputChannelTest(size_t index, bool enabled, bool state) {
   if (!_initialized || !_impl) {
     return Status(Err::NOT_INITIALIZED, 0, "not initialized");
   }
@@ -2232,7 +2243,7 @@ Status CO2Control::enqueueSetOutputChannelTest(size_t index, bool enabled, bool 
   return Ok();
 }
 
-Status CO2Control::enqueueRecoverI2cBus() {
+Status TFLunaControl::enqueueRecoverI2cBus() {
   if (!_initialized || !_impl) {
     return Status(Err::NOT_INITIALIZED, 0, "not initialized");
   }
@@ -2247,13 +2258,13 @@ Status CO2Control::enqueueRecoverI2cBus() {
   return Ok();
 }
 
-Status CO2Control::enqueueRecoverCo2Sensor() {
+Status TFLunaControl::enqueueRecoverLidarSensor() {
   if (!_initialized || !_impl) {
     return Status(Err::NOT_INITIALIZED, 0, "not initialized");
   }
 
   AppCommand cmd;
-  cmd.type = AppCommandType::RECOVER_CO2;
+  cmd.type = AppCommandType::RECOVER_LIDAR;
   cmd.persist = false;
 
   if (!_impl->enqueueCommand(cmd, currentMs())) {
@@ -2262,13 +2273,13 @@ Status CO2Control::enqueueRecoverCo2Sensor() {
   return Ok();
 }
 
-Status CO2Control::enqueueProbeCo2Sensor() {
+Status TFLunaControl::enqueueProbeLidarSensor() {
   if (!_initialized || !_impl) {
     return Status(Err::NOT_INITIALIZED, 0, "not initialized");
   }
 
   AppCommand cmd;
-  cmd.type = AppCommandType::PROBE_CO2;
+  cmd.type = AppCommandType::PROBE_LIDAR;
   cmd.persist = false;
 
   if (!_impl->enqueueCommand(cmd, currentMs())) {
@@ -2277,7 +2288,7 @@ Status CO2Control::enqueueProbeCo2Sensor() {
   return Ok();
 }
 
-Status CO2Control::enqueueProbeSdCard() {
+Status TFLunaControl::enqueueProbeSdCard() {
   if (!_initialized || !_impl) {
     return Status(Err::NOT_INITIALIZED, 0, "not initialized");
   }
@@ -2292,7 +2303,7 @@ Status CO2Control::enqueueProbeSdCard() {
   return Ok();
 }
 
-Status CO2Control::enqueueScanI2cBus() {
+Status TFLunaControl::enqueueScanI2cBus() {
   if (!_initialized || !_impl) {
     return Status(Err::NOT_INITIALIZED, 0, "not initialized");
   }
@@ -2307,7 +2318,7 @@ Status CO2Control::enqueueScanI2cBus() {
   return Ok();
 }
 
-Status CO2Control::enqueueI2cRawWrite(uint8_t address, const uint8_t* tx, uint8_t txLen) {
+Status TFLunaControl::enqueueI2cRawWrite(uint8_t address, const uint8_t* tx, uint8_t txLen) {
   if (!_initialized || !_impl) {
     return Status(Err::NOT_INITIALIZED, 0, "not initialized");
   }
@@ -2332,7 +2343,7 @@ Status CO2Control::enqueueI2cRawWrite(uint8_t address, const uint8_t* tx, uint8_
   return Ok();
 }
 
-Status CO2Control::enqueueI2cRawRead(uint8_t address, uint8_t rxLen) {
+Status TFLunaControl::enqueueI2cRawRead(uint8_t address, uint8_t rxLen) {
   if (!_initialized || !_impl) {
     return Status(Err::NOT_INITIALIZED, 0, "not initialized");
   }
@@ -2356,7 +2367,7 @@ Status CO2Control::enqueueI2cRawRead(uint8_t address, uint8_t rxLen) {
   return Ok();
 }
 
-Status CO2Control::enqueueI2cRawWriteRead(uint8_t address,
+Status TFLunaControl::enqueueI2cRawWriteRead(uint8_t address,
                                           const uint8_t* tx,
                                           uint8_t txLen,
                                           uint8_t rxLen) {
@@ -2387,7 +2398,7 @@ Status CO2Control::enqueueI2cRawWriteRead(uint8_t address,
   return Ok();
 }
 
-Status CO2Control::enqueueI2cProbeAddress(uint8_t address) {
+Status TFLunaControl::enqueueI2cProbeAddress(uint8_t address) {
   if (!_initialized || !_impl) {
     return Status(Err::NOT_INITIALIZED, 0, "not initialized");
   }
@@ -2408,7 +2419,7 @@ Status CO2Control::enqueueI2cProbeAddress(uint8_t address) {
   return Ok();
 }
 
-bool CO2Control::tryGetI2cScanSnapshot(I2cScanSnapshot& out) const {
+bool TFLunaControl::tryGetI2cScanSnapshot(I2cScanSnapshot& out) const {
   if (!_initialized || !_impl) {
     return false;
   }
@@ -2420,7 +2431,7 @@ bool CO2Control::tryGetI2cScanSnapshot(I2cScanSnapshot& out) const {
   return true;
 }
 
-bool CO2Control::tryGetI2cRawSnapshot(I2cRawSnapshot& out) const {
+bool TFLunaControl::tryGetI2cRawSnapshot(I2cRawSnapshot& out) const {
   if (!_initialized || !_impl) {
     return false;
   }
@@ -2432,7 +2443,7 @@ bool CO2Control::tryGetI2cRawSnapshot(I2cRawSnapshot& out) const {
   return true;
 }
 
-bool CO2Control::tryGetRtcDebugSnapshot(RtcDebugSnapshot& out) const {
+bool TFLunaControl::tryGetRtcDebugSnapshot(RtcDebugSnapshot& out) const {
   if (!_initialized || !_impl) {
     return false;
   }
@@ -2444,14 +2455,14 @@ bool CO2Control::tryGetRtcDebugSnapshot(RtcDebugSnapshot& out) const {
   return true;
 }
 
-OutputOverrideMode CO2Control::getOutputOverrideMode() const {
+OutputOverrideMode TFLunaControl::getOutputOverrideMode() const {
   if (!_initialized || !_impl) {
     return OutputOverrideMode::AUTO;
   }
   return _impl->outputs.overrideMode();
 }
 
-bool CO2Control::tryGetOutputChannelState(size_t index, bool& outState) const {
+bool TFLunaControl::tryGetOutputChannelState(size_t index, bool& outState) const {
   outState = false;
   if (!_initialized || !_impl || index >= HardwareSettings::OUTPUT_CHANNEL_COUNT) {
     return false;
@@ -2464,4 +2475,4 @@ bool CO2Control::tryGetOutputChannelState(size_t index, bool& outState) const {
   return true;
 }
 
-}  // namespace CO2Control
+}  // namespace TFLunaControl

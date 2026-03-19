@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 
-namespace CO2Control {
+namespace TFLunaControl {
 
 /**
  * @brief Simple periodic scheduler helper.
@@ -38,4 +38,4 @@ class PeriodicTimer {
   bool _initialized = false;
 };
 
-}  // namespace CO2Control
+}  // namespace TFLunaControl

@@ -3,9 +3,9 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "CO2Control/Types.h"
+#include "TFLunaControl/Types.h"
 
-namespace CO2Control {
+namespace TFLunaControl {
 
 /// @brief Stateless time conversion helpers used across modules.
 /// @note Kept in `core/` because these helpers are generic and do not own runtime settings/state.
@@ -27,4 +27,4 @@ void formatLocalTime(const RtcTime& t, char* out, size_t len);
 /// @param out RTC time output
 void fromUnixSeconds(uint32_t unixSeconds, RtcTime& out);
 
-}  // namespace CO2Control
+}  // namespace TFLunaControl

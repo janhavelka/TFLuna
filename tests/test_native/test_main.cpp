@@ -16,8 +16,8 @@
 #include "core/RingBuffer.h"
 #include "core/Scheduler.h"
 #include "core/ApiJson.h"
-#include "CO2Control/RuntimeSettings.h"
-#include "CO2Control/Types.h"
+#include "TFLunaControl/RuntimeSettings.h"
+#include "TFLunaControl/Types.h"
 #include "devices/StatusLedAdapter.h"
 #include "i2c/I2cBackend.h"
 #include "i2c/I2cOrchestrator.h"
@@ -26,9 +26,9 @@
 #include "logging/SdLogger.h"
 #include "web/WebLockOrder.h"
 #include "web/WebServer.h"
-#include "CO2Control/CO2Control.h"
+#include "TFLunaControl/TFLunaControl.h"
 
-using namespace CO2Control;
+using namespace TFLunaControl;
 
 void setUp() {}
 void tearDown() {}
@@ -527,7 +527,7 @@ void test_sample_interval_upper_bound_matches_timer_window() {
 
 void test_app_settings_validation_guards_present() {
   std::string source;
-  TEST_ASSERT_TRUE(loadTextFile("src/CO2Control.cpp", source));
+  TEST_ASSERT_TRUE(loadTextFile("src/TFLunaControl.cpp", source));
   const char* text = source.c_str();
   TEST_ASSERT_NOT_NULL(strstr(text, "validateAppSettings"));
   TEST_ASSERT_NOT_NULL(strstr(text, "webBroadcastMs out of range"));
@@ -718,7 +718,7 @@ void test_log_flush_due_logic() {
 
 void test_web_server_lifecycle_reinit_safe() {
   WebServer web;
-  CO2Control::CO2Control app;
+  TFLunaControl::TFLunaControl app;
   TEST_ASSERT_TRUE(web.begin(&app).ok());
   TEST_ASSERT_TRUE(web.begin(&app).ok());
   web.end();
@@ -757,7 +757,7 @@ void test_web_graph_events_no_heap_alloc_path() {
 
 void test_no_unbounded_state_mutex_waits() {
   std::string source;
-  TEST_ASSERT_TRUE(loadTextFile("src/CO2Control.cpp", source));
+  TEST_ASSERT_TRUE(loadTextFile("src/TFLunaControl.cpp", source));
   const char* text = source.c_str();
 
   TEST_ASSERT_NULL(strstr(text, "portMAX_DELAY"));
@@ -767,7 +767,7 @@ void test_no_unbounded_state_mutex_waits() {
 void test_nothrow_allocation_paths_for_runtime_objects() {
   std::string appSource;
   std::string ledSource;
-  TEST_ASSERT_TRUE(loadTextFile("src/CO2Control.cpp", appSource));
+  TEST_ASSERT_TRUE(loadTextFile("src/TFLunaControl.cpp", appSource));
   TEST_ASSERT_TRUE(loadTextFile("src/devices/StatusLedAdapter.cpp", ledSource));
 
   TEST_ASSERT_NOT_NULL(strstr(appSource.c_str(), "new (std::nothrow) Impl()"));

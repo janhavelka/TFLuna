@@ -6,7 +6,7 @@
 #include <stdarg.h>
 #include <string.h>
 
-#include "CO2Control/Version.h"
+#include "TFLunaControl/Version.h"
 #include "core/TimeUtil.h"
 
 #ifdef ARDUINO
@@ -49,55 +49,55 @@
 #include "StatusLed/Version.h"
 #endif
 
-#ifndef CO2CONTROL_DEP_EE871_VERSION
-#define CO2CONTROL_DEP_EE871_VERSION "v0.3.0"
+#ifndef TFLUNACTRL_DEP_EE871_VERSION
+#define TFLUNACTRL_DEP_EE871_VERSION "v0.3.0"
 #endif
 
-#ifndef CO2CONTROL_DEP_BME280_VERSION
-#define CO2CONTROL_DEP_BME280_VERSION "v1.2.1"
+#ifndef TFLUNACTRL_DEP_BME280_VERSION
+#define TFLUNACTRL_DEP_BME280_VERSION "v1.2.1"
 #endif
 
-#ifndef CO2CONTROL_DEP_SHT3X_VERSION
-#define CO2CONTROL_DEP_SHT3X_VERSION "v1.4.0"
+#ifndef TFLUNACTRL_DEP_SHT3X_VERSION
+#define TFLUNACTRL_DEP_SHT3X_VERSION "v1.4.0"
 #endif
 
-#ifndef CO2CONTROL_DEP_RV3032_VERSION
-#define CO2CONTROL_DEP_RV3032_VERSION "v1.3.0"
+#ifndef TFLUNACTRL_DEP_RV3032_VERSION
+#define TFLUNACTRL_DEP_RV3032_VERSION "v1.3.0"
 #endif
 
-#ifndef CO2CONTROL_DEP_SSD1315_VERSION
-#define CO2CONTROL_DEP_SSD1315_VERSION "v1.1.0"
+#ifndef TFLUNACTRL_DEP_SSD1315_VERSION
+#define TFLUNACTRL_DEP_SSD1315_VERSION "v1.1.0"
 #endif
 
-#ifndef CO2CONTROL_DEP_ASYNCSD_VERSION
-#define CO2CONTROL_DEP_ASYNCSD_VERSION "v1.3.0"
+#ifndef TFLUNACTRL_DEP_ASYNCSD_VERSION
+#define TFLUNACTRL_DEP_ASYNCSD_VERSION "v1.3.0"
 #endif
 
-#ifndef CO2CONTROL_DEP_SYSTEMCHRONO_VERSION
-#define CO2CONTROL_DEP_SYSTEMCHRONO_VERSION "v1.2.0"
+#ifndef TFLUNACTRL_DEP_SYSTEMCHRONO_VERSION
+#define TFLUNACTRL_DEP_SYSTEMCHRONO_VERSION "v1.2.0"
 #endif
 
-#ifndef CO2CONTROL_DEP_STATUSLED_VERSION
-#define CO2CONTROL_DEP_STATUSLED_VERSION "v1.3.0"
+#ifndef TFLUNACTRL_DEP_STATUSLED_VERSION
+#define TFLUNACTRL_DEP_STATUSLED_VERSION "v1.3.0"
 #endif
 
-#ifndef CO2CONTROL_DEP_ARDUINOJSON_VERSION
-#define CO2CONTROL_DEP_ARDUINOJSON_VERSION "^6.21.3"
+#ifndef TFLUNACTRL_DEP_ARDUINOJSON_VERSION
+#define TFLUNACTRL_DEP_ARDUINOJSON_VERSION "^6.21.3"
 #endif
 
-#ifndef CO2CONTROL_DEP_ESPASYNCWEBSERVER_VERSION
-#define CO2CONTROL_DEP_ESPASYNCWEBSERVER_VERSION "v3.9.6"
+#ifndef TFLUNACTRL_DEP_ESPASYNCWEBSERVER_VERSION
+#define TFLUNACTRL_DEP_ESPASYNCWEBSERVER_VERSION "v3.9.6"
 #endif
 
-#ifndef CO2CONTROL_DEP_ASYNCTCP_VERSION
-#define CO2CONTROL_DEP_ASYNCTCP_VERSION "v3.4.10"
+#ifndef TFLUNACTRL_DEP_ASYNCTCP_VERSION
+#define TFLUNACTRL_DEP_ASYNCTCP_VERSION "v3.4.10"
 #endif
 
-namespace CO2Control {
+namespace TFLunaControl {
 
 #ifndef ARDUINO
 
-SerialCli::SerialCli(CO2Control& app) : _app(app) {}
+SerialCli::SerialCli(TFLunaControl& app) : _app(app) {}
 
 Status SerialCli::begin() { return Ok(); }
 
@@ -198,11 +198,11 @@ const char* errToStrColored(Err err) {
   }
 }
 
-/// Colorized yes/no: true→green "yes", false→red "no"
+/// Colorized yes/no: trueâ†’green "yes", falseâ†’red "no"
 const char* yesNo(bool v) {
   return v ? "\033[32myes\033[0m" : "\033[31mno\033[0m";
 }
-/// Colorized OK/NOT OK: true→green "yes", false→red "no"
+/// Colorized OK/NOT OK: trueâ†’green "yes", falseâ†’red "no"
 const char* okNo(bool v) {
   return v ? "\033[32myes\033[0m" : "\033[31mno\033[0m";
 }
@@ -210,7 +210,7 @@ const char* okNo(bool v) {
 const char* validInvalid(bool v) {
   return v ? "\033[32mvalid\033[0m" : "\033[31minvalid\033[0m";
 }
-/// Colorize a counter: 0→plain, >0→red
+/// Colorize a counter: 0â†’plain, >0â†’red
 void printCounterVal(const char* label, uint32_t value, const char* unit = "") {
   const char* color = (value > 0U) ? CLI_ANSI_ERR : CLI_ANSI_INFO;
   if (unit[0] == '\0') {
@@ -367,13 +367,51 @@ const char* sdCardTypeToStr(uint8_t code) {
   }
 }
 
+const char* cliVerbosityToStr(uint8_t level) {
+  switch (level) {
+    case 0:
+      return "compact";
+    case 1:
+      return "normal";
+    case 2:
+      return "verbose";
+    default:
+      return "unknown";
+  }
+}
+
+bool parseU8Token(const char* token, uint8_t& out);
+
+bool parseCliVerbosityToken(const char* token, uint8_t& out) {
+  if (token == nullptr) {
+    return false;
+  }
+  if (strcmp(token, "compact") == 0) {
+    out = 0U;
+    return true;
+  }
+  if (strcmp(token, "normal") == 0) {
+    out = 1U;
+    return true;
+  }
+  if (strcmp(token, "verbose") == 0) {
+    out = 2U;
+    return true;
+  }
+  if (!parseU8Token(token, out)) {
+    return false;
+  }
+  return out >= RuntimeSettings::MIN_CLI_VERBOSITY &&
+         out <= RuntimeSettings::MAX_CLI_VERBOSITY;
+}
+
 void printVersionInfo() {
   Serial.printf("%sVersion%s\n", CLI_ANSI_BOLD, CLI_ANSI_RESET);
   Serial.println("------------------------------");
-  Serial.printf("  co2control: %s\n", ::CO2Control::VERSION);
-  Serial.printf("  co2control_full: %s\n", ::CO2Control::VERSION_FULL);
-  Serial.printf("  build_meta: %s\n", ::CO2Control::BUILD_TIMESTAMP);
-  Serial.printf("  git: %s (%s)\n", ::CO2Control::GIT_COMMIT, ::CO2Control::GIT_STATUS);
+  Serial.printf("  tflunactrl: %s\n", ::TFLunaControl::VERSION);
+  Serial.printf("  tflunactrl_full: %s\n", ::TFLunaControl::VERSION_FULL);
+  Serial.printf("  build_meta: %s\n", ::TFLunaControl::BUILD_TIMESTAMP);
+  Serial.printf("  git: %s (%s)\n", ::TFLunaControl::GIT_COMMIT, ::TFLunaControl::GIT_STATUS);
   Serial.printf("  firmware_build: %s %s\n", __DATE__, __TIME__);
 
   [[maybe_unused]] auto printMissingVersionHeader = [](const char* libKey,
@@ -386,53 +424,53 @@ void printVersionInfo() {
 #if __has_include("EE871/Version.h")
   Serial.printf("  lib_ee871: %s [header]\n", EE871::VERSION);
 #else
-  printMissingVersionHeader("lib_ee871", CO2CONTROL_DEP_EE871_VERSION);
+  printMissingVersionHeader("lib_ee871", TFLUNACTRL_DEP_EE871_VERSION);
 #endif
 #if __has_include("BME280/Version.h")
   Serial.printf("  lib_bme280: %s [header]\n", BME280::VERSION);
 #else
-  printMissingVersionHeader("lib_bme280", CO2CONTROL_DEP_BME280_VERSION);
+  printMissingVersionHeader("lib_bme280", TFLUNACTRL_DEP_BME280_VERSION);
 #endif
 #if __has_include("SHT3x/Version.h")
   Serial.printf("  lib_sht3x: %s [header]\n", SHT3x::VERSION);
 #else
-  printMissingVersionHeader("lib_sht3x", CO2CONTROL_DEP_SHT3X_VERSION);
+  printMissingVersionHeader("lib_sht3x", TFLUNACTRL_DEP_SHT3X_VERSION);
 #endif
 #if __has_include("RV3032/Version.h")
   Serial.printf("  lib_rv3032: %s [header]\n", RV3032::VERSION);
 #else
-  printMissingVersionHeader("lib_rv3032", CO2CONTROL_DEP_RV3032_VERSION);
+  printMissingVersionHeader("lib_rv3032", TFLUNACTRL_DEP_RV3032_VERSION);
 #endif
 #if __has_include("ssd1315/Version.h")
   Serial.printf("  lib_ssd1315: %s [header]\n", SSD1315::VERSION);
 #else
-  printMissingVersionHeader("lib_ssd1315", CO2CONTROL_DEP_SSD1315_VERSION);
+  printMissingVersionHeader("lib_ssd1315", TFLUNACTRL_DEP_SSD1315_VERSION);
 #endif
 #if __has_include("AsyncSD/Version.h")
   Serial.printf("  lib_asyncsd: %s [header]\n", AsyncSD::VERSION);
 #else
-  printMissingVersionHeader("lib_asyncsd", CO2CONTROL_DEP_ASYNCSD_VERSION);
+  printMissingVersionHeader("lib_asyncsd", TFLUNACTRL_DEP_ASYNCSD_VERSION);
 #endif
 #if __has_include("SystemChrono/Version.h")
   Serial.printf("  lib_systemchrono: %s [header]\n", SystemChrono::VERSION);
 #else
-  printMissingVersionHeader("lib_systemchrono", CO2CONTROL_DEP_SYSTEMCHRONO_VERSION);
+  printMissingVersionHeader("lib_systemchrono", TFLUNACTRL_DEP_SYSTEMCHRONO_VERSION);
 #endif
 #if __has_include("StatusLed/Version.h")
   Serial.printf("  lib_statusled: %s [header]\n", StatusLed::VERSION);
 #else
-  printMissingVersionHeader("lib_statusled", CO2CONTROL_DEP_STATUSLED_VERSION);
+  printMissingVersionHeader("lib_statusled", TFLUNACTRL_DEP_STATUSLED_VERSION);
 #endif
 #if defined(ARDUINOJSON_VERSION_MAJOR) && defined(ARDUINOJSON_VERSION_MINOR) && \
     defined(ARDUINOJSON_VERSION_REVISION)
   Serial.printf("  lib_arduinojson: %d.%d.%d [header]\n", ARDUINOJSON_VERSION_MAJOR,
                 ARDUINOJSON_VERSION_MINOR, ARDUINOJSON_VERSION_REVISION);
 #else
-  printMissingVersionHeader("lib_arduinojson", CO2CONTROL_DEP_ARDUINOJSON_VERSION);
+  printMissingVersionHeader("lib_arduinojson", TFLUNACTRL_DEP_ARDUINOJSON_VERSION);
 #endif
   Serial.printf("  lib_espasyncwebserver: %s [pin]\n",
-                CO2CONTROL_DEP_ESPASYNCWEBSERVER_VERSION);
-  Serial.printf("  lib_asynctcp: %s [pin]\n", CO2CONTROL_DEP_ASYNCTCP_VERSION);
+                TFLUNACTRL_DEP_ESPASYNCWEBSERVER_VERSION);
+  Serial.printf("  lib_asynctcp: %s [pin]\n", TFLUNACTRL_DEP_ASYNCTCP_VERSION);
 }
 
 void sprintBytesHuman(char* buf, size_t bufLen, uint64_t bytes) {
@@ -567,6 +605,8 @@ bool isSettingGroup(const char* group) {
   return strcmp(group, "system") == 0 ||
          strcmp(group, "log") == 0 ||
          strcmp(group, "sd") == 0 ||
+         strcmp(group, "lidar") == 0 ||
+         strcmp(group, "tfluna") == 0 ||
          strcmp(group, "i2c") == 0 ||
          strcmp(group, "env") == 0 ||
          strcmp(group, "rtc") == 0 ||
@@ -613,6 +653,30 @@ bool resolveGroupedSettingKey(const char* group,
     }
     outKey = keyBuffer;
     return true;
+  }
+  if (strcmp(group, "lidar") == 0 || strcmp(group, "tfluna") == 0) {
+    if (strcmp(key, "service_ms") == 0) {
+      outKey = "lidar_service_ms";
+      return true;
+    }
+    if (strcmp(key, "min_strength") == 0) {
+      outKey = "lidar_min_strength";
+      return true;
+    }
+    if (strcmp(key, "max_distance_cm") == 0) {
+      outKey = "lidar_max_distance_cm";
+      return true;
+    }
+    if (strcmp(key, "frame_stale_ms") == 0 || strcmp(key, "stale_ms") == 0) {
+      outKey = "lidar_frame_stale_ms";
+      return true;
+    }
+    if (strcmp(key, "serial_print_interval_ms") == 0 || strcmp(key, "serial_ms") == 0) {
+      outKey = "serial_print_interval_ms";
+      return true;
+    }
+    errorMsg = "unknown lidar key";
+    return false;
   }
   if (strcmp(group, "e2") == 0 || strcmp(group, "co2") == 0) {
     if (!safePrefixedKey(keyBuffer, keyBufferSize, "e2_", key)) {
@@ -852,6 +916,10 @@ bool resolveGroupedSettingKey(const char* group,
   }
 
   if (strcmp(group, "system") == 0) {
+    if (strcmp(key, "verbosity") == 0 || strcmp(key, "cli_verbosity") == 0) {
+      outKey = "cli_verbosity";
+      return true;
+    }
     outKey = key;
     return true;
   }
@@ -889,8 +957,9 @@ const char* normalizeDeviceName(const char* name) {
   if (strcmp(name, "i2c") == 0) {
     return "i2c_bus";
   }
-  if (strcmp(name, "e2") == 0) {
-    return "co2";
+  if (strcmp(name, "e2") == 0 || strcmp(name, "co2") == 0 ||
+      strcmp(name, "lidar") == 0 || strcmp(name, "tfluna") == 0) {
+    return "lidar";
   }
   return name;
 }
@@ -921,8 +990,8 @@ const char* settingsSectionForDevice(const char* deviceName) {
   if (strcmp(normalized, "rtc") == 0) {
     return "rtc";
   }
-  if (strcmp(normalized, "co2") == 0) {
-    return "co2";
+  if (strcmp(normalized, "lidar") == 0) {
+    return "lidar";
   }
   if (strcmp(normalized, "sd") == 0) {
     return "sd";
@@ -986,7 +1055,8 @@ bool parseOutputSourceToken(const char* token, uint8_t& out) {
   if (token == nullptr) {
     return false;
   }
-  if (strcmp(token, "co2") == 0) {
+  if (strcmp(token, "co2") == 0 || strcmp(token, "lidar") == 0 ||
+      strcmp(token, "distance") == 0 || strcmp(token, "tfluna") == 0) {
     out = static_cast<uint8_t>(OutputSource::CO2);
     return true;
   }
@@ -1018,8 +1088,21 @@ bool applySettingByKey(RuntimeSettings& settings,
     return false;
   }
 
+  if (strcmp(key, "sample_interval_ms") == 0) {
+    return parseU32Token(value, settings.sampleIntervalMs) ? true : (errorMsg = "invalid u32", false);
+  }
   if (strcmp(key, "sample_interval_sec") == 0) {
-    return parseU32Token(value, settings.sampleIntervalSec) ? true : (errorMsg = "invalid u32", false);
+    uint32_t seconds = 0;
+    if (!parseU32Token(value, seconds)) {
+      errorMsg = "invalid u32";
+      return false;
+    }
+    if (seconds > (UINT32_MAX / 1000U)) {
+      errorMsg = "sample interval too large";
+      return false;
+    }
+    settings.sampleIntervalMs = seconds * 1000U;
+    return true;
   }
   if (strcmp(key, "log_daily_enabled") == 0) {
     return parseBoolToken(value, settings.logDailyEnabled) ? true : (errorMsg = "invalid bool", false);
@@ -1052,6 +1135,26 @@ bool applySettingByKey(RuntimeSettings& settings,
   }
   if (strcmp(key, "log_events_max_bytes") == 0) {
     return parseU32Token(value, settings.logEventsMaxBytes) ? true : (errorMsg = "invalid u32", false);
+  }
+  if (strcmp(key, "lidar_service_ms") == 0) {
+    return parseU32Token(value, settings.lidarServiceMs) ? true : (errorMsg = "invalid u32", false);
+  }
+  if (strcmp(key, "lidar_min_strength") == 0) {
+    return parseU16Token(value, settings.lidarMinStrength) ? true : (errorMsg = "invalid u16", false);
+  }
+  if (strcmp(key, "lidar_max_distance_cm") == 0) {
+    return parseU16Token(value, settings.lidarMaxDistanceCm) ? true : (errorMsg = "invalid u16", false);
+  }
+  if (strcmp(key, "lidar_frame_stale_ms") == 0) {
+    return parseU32Token(value, settings.lidarFrameStaleMs) ? true : (errorMsg = "invalid u32", false);
+  }
+  if (strcmp(key, "serial_print_interval_ms") == 0) {
+    return parseU32Token(value, settings.serialPrintIntervalMs) ? true : (errorMsg = "invalid u32", false);
+  }
+  if (strcmp(key, "cli_verbosity") == 0) {
+    return parseCliVerbosityToken(value, settings.cliVerbosity)
+               ? true
+               : (errorMsg = "invalid verbosity (0..2|compact|normal|verbose)", false);
   }
   if (strcmp(key, "i2c_freq_hz") == 0) {
     return parseU32Token(value, settings.i2cFreqHz) ? true : (errorMsg = "invalid u32", false);
@@ -1344,11 +1447,11 @@ bool applySettingByKey(RuntimeSettings& settings,
 
 }  // namespace
 
-SerialCli::SerialCli(CO2Control& app) : _app(app) {}
+SerialCli::SerialCli(TFLunaControl& app) : _app(app) {}
 
 Status SerialCli::begin() {
   Serial.println();
-  Serial.printf("%sCO2Control Serial CLI%s\n", CLI_ANSI_BOLD, CLI_ANSI_RESET);
+  Serial.printf("%sTFLunaControl Serial CLI%s\n", CLI_ANSI_BOLD, CLI_ANSI_RESET);
   Serial.println("Type 'help' or '?' for commands.");
   Serial.print("> ");
   return Ok();
@@ -1392,7 +1495,7 @@ void SerialCli::printHelp(const char* topic) {
   const char* resolved = topic;
   if (resolved == nullptr || resolved[0] == '\0' || strcmp(resolved, "all") == 0 ||
       strcmp(resolved, "topics") == 0) {
-    Serial.printf("%sCO2Control CLI%s\n", CLI_ANSI_BOLD, CLI_ANSI_RESET);
+    Serial.printf("%sTFLunaControl CLI%s\n", CLI_ANSI_BOLD, CLI_ANSI_RESET);
     Serial.println("------------------------------");
     printHelpSection("Common");
     printHelpLine("help / ?", "Show this help");
@@ -1401,7 +1504,7 @@ void SerialCli::printHelp(const char* topic) {
     printHelpLine("version", "Firmware and dependency versions");
     printHelpLine("status", "System health summary");
     printHelpLine("devices", "Health summary for all devices");
-    printHelpLine("read [all|co2|env|rtc]", "Latest cached measurements");
+    printHelpLine("read [all|lidar|env|rtc]", "Latest cached measurements");
     printHelpLine("ls [path]", "Show runtime-tracked SD log paths");
     printHelpLine("settings show all", "Runtime settings snapshot");
     printHelpLine("diag all", "Guided diagnostics");
@@ -1409,7 +1512,7 @@ void SerialCli::printHelp(const char* topic) {
     printHelpSection("Domains");
     printHelpLine("env", "Environment sensor control");
     printHelpLine("rtc", "RTC control");
-    printHelpLine("co2 / e2", "EE871 CO2 (E2 bus) control");
+    printHelpLine("lidar / tfluna / co2", "TF-Luna UART diagnostics and settings");
     printHelpLine("i2c", "I2C bus diagnostics and settings");
     printHelpLine("display", "SSD1315 display control");
     printHelpLine("sd", "SD logger control");
@@ -1419,7 +1522,6 @@ void SerialCli::printHelp(const char* topic) {
     printHelpLine("system", "System timing/control settings");
     printHelpLine("leds", "Status LED behavior");
     printHelpLine("button", "Button diagnostics");
-    printHelpLine("rs485", "RS485 diagnostics");
     Serial.println();
     printHelpSection("Aliases");
     printHelpLine("doctor", "Alias of diag");
@@ -1464,7 +1566,7 @@ void SerialCli::printHelp(const char* topic) {
     Serial.println();
     Serial.println("2) Sensor check (targeted)");
     Serial.println("  env status / env read");
-    Serial.println("  co2 status / co2 read");
+    Serial.println("  lidar status / lidar read");
     Serial.println("  rtc status / rtc read");
     Serial.println();
     Serial.println("3) Bus / recovery path");
@@ -1488,7 +1590,9 @@ void SerialCli::printHelp(const char* topic) {
     printTopicHeader("CLI Aliases");
     printTopicGroup("Top-level aliases");
     Serial.println("  doctor            -> diag");
-    Serial.println("  e2 ...            -> co2 ...");
+    Serial.println("  tfluna ...        -> lidar ...");
+    Serial.println("  e2 ...            -> lidar ...");
+    Serial.println("  co2 ...           -> lidar ...");
     Serial.println("  guide <topic>     -> help <topic>");
     Serial.println("  i2c_scan [status] -> i2c scan / i2c scan status");
     Serial.println("  i2c_recover       -> i2c recover");
@@ -1496,7 +1600,7 @@ void SerialCli::printHelp(const char* topic) {
     Serial.println();
     printTopicGroup("Device wrapper");
     Serial.println("  device <name> status|settings|read|diag|probe|recover");
-    Serial.println("  device normalizes names: i2c->i2c_bus, e2->co2");
+    Serial.println("  device normalizes names: i2c->i2c_bus, e2/co2/tfluna->lidar");
     return;
   }
 
@@ -1525,8 +1629,8 @@ void SerialCli::printHelp(const char* topic) {
 
   if (strcmp(resolved, "read") == 0) {
     printTopicHeader("Read");
-    Serial.println("  read [all|co2|env|rtc]");
-    Serial.println("  device <co2|e2|env|rtc> read");
+    Serial.println("  read [all|lidar|env|rtc]");
+    Serial.println("  device <lidar|tfluna|co2|e2|env|rtc> read");
     Serial.println("  Reads latest cached values (does not force hardware transaction).");
     printTopicMeta("Returns");
     Serial.println("  Last sampled measurements and timestamps from runtime cache.");
@@ -1562,10 +1666,10 @@ void SerialCli::printHelp(const char* topic) {
     Serial.println("  device list");
     Serial.println("  device <name> status");
     Serial.println("  device <name> settings");
-    Serial.println("  device <co2|e2|env|rtc> read");
-    Serial.println("  device <i2c|rtc|env> diag");
-    Serial.println("  device <i2c|env|rtc|display> probe");
-    Serial.println("  device <i2c|env|rtc> recover");
+    Serial.println("  device <lidar|tfluna|co2|e2|env|rtc> read");
+    Serial.println("  device <lidar|i2c|rtc|env> diag");
+    Serial.println("  device <lidar|i2c|env|rtc|display> probe");
+    Serial.println("  device <lidar|i2c|env|rtc> recover");
     Serial.println("  device sd remount");
     Serial.println("  device sd ls [path]");
     Serial.println("  device outputs state");
@@ -1738,45 +1842,40 @@ void SerialCli::printHelp(const char* topic) {
     return;
   }
 
-  if (strcmp(resolved, "co2") == 0 || strcmp(resolved, "e2") == 0) {
-    printTopicHeader("CO2 Sensor (EE871 / E2 bus)");
+  if (strcmp(resolved, "lidar") == 0 || strcmp(resolved, "tfluna") == 0 ||
+      strcmp(resolved, "co2") == 0 || strcmp(resolved, "e2") == 0) {
+    printTopicHeader("TF-Luna UART");
     printTopicGroup("Snapshot");
-    Serial.println("  co2 status");
-    Serial.println("  co2 read");
-    Serial.println("  co2 settings");
-    Serial.println("  co2 address");
-    Serial.println("  co2 timeouts");
-    Serial.println("  co2 timing");
-    Serial.println("  co2 write_delay");
-    Serial.println("  co2 offline");
-    Serial.println("  co2 backoff");
-    Serial.println("  co2 cfg");
-    Serial.println("  co2 cfg <interval|factor|filter|mode|offset|gain>");
+    Serial.println("  lidar status");
+    Serial.println("  lidar read");
+    Serial.println("  lidar settings");
+    Serial.println("  lidar pins");
+    Serial.println("  lidar service");
+    Serial.println("  lidar min_strength");
+    Serial.println("  lidar max_distance");
+    Serial.println("  lidar stale");
+    Serial.println("  lidar serial");
     Serial.println();
     printTopicGroup("Queue actions");
-    Serial.println("  co2 recover");
+    Serial.println("  lidar recover");
+    Serial.println("  lidar probe");
     Serial.println();
-    printTopicGroup("Bus settings ([p] = persist:0|1)");
-    Serial.println("  co2 address <0..7> [p]  Sensor address");
-    Serial.println("  co2 timeouts <bit_us> <byte_us> [p]");
-    Serial.println("  co2 timing <clk_lo> <clk_hi> <start> <stop> [p]");
-    Serial.println("  co2 write_delay <wr_ms> <interval_wr_ms> [p]");
-    Serial.println("  co2 offline <n> [p]     Offline threshold");
-    Serial.println("  co2 backoff <base> <max> [p]");
+    printTopicGroup("Runtime settings ([p] = persist:0|1)");
+    Serial.println("  lidar service <ms> [p]        UART service cadence");
+    Serial.println("  lidar min_strength <n> [p]    Minimum accepted strength");
+    Serial.println("  lidar max_distance <cm> [p]   Maximum accepted distance");
+    Serial.println("  lidar stale <ms> [p]          Stale-frame threshold");
+    Serial.println("  lidar serial <ms> [p]         Periodic serial summary");
     Serial.println();
-    printTopicGroup("Sensor config (written to EE871 EEPROM)");
-    Serial.println("  co2 cfg interval <ds|off> [p]   Measurement (decisec)");
-    Serial.println("  co2 cfg factor <-127..127|off> [p]");
-    Serial.println("  co2 cfg filter <0..254|off> [p]");
-    Serial.println("  co2 cfg mode <0..3|off>  [p]");
-    Serial.println("  co2 cfg offset <ppm|off> [p]");
-    Serial.println("  co2 cfg gain <1..65534|off> [p]");
-    Serial.println("  alias: e2 ...");
+    printTopicGroup("Pin mapping");
+    Serial.println("  TF-Luna TX -> ESP32 RX GPIO15");
+    Serial.println("  TF-Luna RX -> ESP32 TX GPIO14");
+    Serial.println("  aliases: tfluna/co2/e2 -> lidar");
     Serial.println();
     printTopicMeta("Returns");
-    Serial.println("  read/status expose ppm, state, quality, and EE871 health counters.");
+    Serial.println("  read/status expose distance, strength, temperature, and UART health counters.");
     printTopicMeta("Possibilities");
-    Serial.println("  Tune bus timing and sensor EEPROM parameters from one shell.");
+    Serial.println("  Verify wiring, run one-shot probe, and tune live validity thresholds.");
     return;
   }
 
@@ -1892,6 +1991,7 @@ void SerialCli::printHelp(const char* topic) {
     Serial.println();
     printTopicGroup("Settings ([p] = persist:0|1)");
     Serial.println("  system sample_interval <sec> [p]");
+    Serial.println("  system verbosity <0|1|2> [p]  compact|normal|verbose");
     Serial.println("  system command_drain <n> [p]");
     Serial.println("  system command_window <ms> [p]");
     Serial.println("  system command_depth <n> [p]");
@@ -1930,22 +2030,11 @@ void SerialCli::printHelp(const char* topic) {
     return;
   }
 
-  if (strcmp(resolved, "rs485") == 0) {
-    printTopicHeader("RS485 (stub)");
-    Serial.println("  rs485 status            Module state");
-    Serial.println("  rs485 settings          RS485 settings");
-    Serial.println();
-    Serial.println("  RS485 is stubbed in current firmware.");
-    printTopicMeta("Returns");
-    Serial.println("  Placeholder diagnostics only; no active protocol driver in this build.");
-    return;
-  }
-
   if (strcmp(resolved, "settings") == 0 || strcmp(resolved, "set") == 0) {
     printTopicHeader("Settings");
     printTopicGroup("View");
-    Serial.println("  settings show [section]   all|log|sd|i2c|env|rtc|");
-    Serial.println("                            display|co2|wifi|outputs|");
+    Serial.println("  settings show [section]   all|log|sd|lidar|i2c|env|rtc|");
+    Serial.println("                            display|wifi|outputs|");
     Serial.println("                            system|leds|web");
     Serial.println("  set list [group]          List keys in group");
     Serial.println();
@@ -1955,6 +2044,7 @@ void SerialCli::printHelp(const char* topic) {
     Serial.println();
     printTopicGroup("Examples");
     Serial.println("  set env address 0x76 1");
+    Serial.println("  set lidar min_strength 80");
     Serial.println("  set rtc poll_ms 2000");
     Serial.println("  set i2c op_timeout_ms 30");
     Serial.println("  set outputs on_temp 28 1");
@@ -1968,6 +2058,7 @@ void SerialCli::printHelp(const char* topic) {
   if (strcmp(resolved, "diag") == 0 || strcmp(resolved, "doctor") == 0) {
     printTopicHeader("Diagnostics");
     Serial.println("  diag all                Run all checks");
+    Serial.println("  diag lidar              TF-Luna UART health");
     Serial.println("  diag i2c                I2C bus health");
     Serial.println("  diag rtc                RTC health");
     Serial.println("  diag env                ENV sensor health");
@@ -2004,6 +2095,9 @@ void SerialCli::printHelp(const char* topic) {
 }
 
 void SerialCli::printStatus() {
+  const uint8_t verbosity = currentVerbosity();
+  const bool compact = verbosity == 0U;
+  const bool verbose = verbosity >= 2U;
   SystemStatus sys{};
   Sample latest{};
   bool hasLatest = false;
@@ -2018,14 +2112,23 @@ void SerialCli::printStatus() {
   Serial.printf("  %s%-28s%s %lu ms\n", CLI_ANSI_INFO, "Uptime", CLI_ANSI_RESET, static_cast<unsigned long>(sys.uptimeMs));
   formatUptimeHuman(sys.uptimeMs, buf, sizeof(buf));
   Serial.printf("  %s%-28s%s %s\n", CLI_ANSI_INFO, "Uptime (human)", CLI_ANSI_RESET, buf);
+  Serial.printf("  %s%-28s%s %s (%u)\n",
+                CLI_ANSI_INFO,
+                "CLI verbosity",
+                CLI_ANSI_RESET,
+                cliVerbosityToStr(verbosity),
+                static_cast<unsigned int>(verbosity));
+  Serial.printf("  %s%-28s%s %s\n", CLI_ANSI_INFO, "Time source", CLI_ANSI_RESET, sys.timeSource);
   Serial.printf("  %s%-28s%s %lu\n", CLI_ANSI_INFO, "Samples", CLI_ANSI_RESET, static_cast<unsigned long>(sys.sampleCount));
   Serial.printf("  %s%-28s%s %lu ms\n", CLI_ANSI_INFO, "Last sample", CLI_ANSI_RESET, static_cast<unsigned long>(sys.lastSampleMs));
-  Serial.println();
-  Serial.printf("%s[Tick Timing]%s\n", CLI_ANSI_WARN, CLI_ANSI_RESET);
-  Serial.printf("  %s%-28s%s %lu us\n", CLI_ANSI_INFO, "Last", CLI_ANSI_RESET, static_cast<unsigned long>(sys.tickLastDurationUs));
-  Serial.printf("  %s%-28s%s %lu us\n", CLI_ANSI_INFO, "Mean", CLI_ANSI_RESET, static_cast<unsigned long>(sys.tickMeanDurationUs));
-  Serial.printf("  %s%-28s%s %lu us\n", CLI_ANSI_INFO, "Max", CLI_ANSI_RESET, static_cast<unsigned long>(sys.tickMaxDurationUs));
-  printCounterVal("Slow count", sys.tickSlowCount);
+  if (!compact) {
+    Serial.println();
+    Serial.printf("%s[Tick Timing]%s\n", CLI_ANSI_WARN, CLI_ANSI_RESET);
+    Serial.printf("  %s%-28s%s %lu us\n", CLI_ANSI_INFO, "Last", CLI_ANSI_RESET, static_cast<unsigned long>(sys.tickLastDurationUs));
+    Serial.printf("  %s%-28s%s %lu us\n", CLI_ANSI_INFO, "Mean", CLI_ANSI_RESET, static_cast<unsigned long>(sys.tickMeanDurationUs));
+    Serial.printf("  %s%-28s%s %lu us\n", CLI_ANSI_INFO, "Max", CLI_ANSI_RESET, static_cast<unsigned long>(sys.tickMaxDurationUs));
+    printCounterVal("Slow count", sys.tickSlowCount);
+  }
   Serial.println();
   Serial.printf("%s[SD Card]%s\n", CLI_ANSI_WARN, CLI_ANSI_RESET);
   Serial.printf("  %s%-28s%s %s\n", CLI_ANSI_INFO, "Mounted", CLI_ANSI_RESET, yesNo(sys.sdMounted));
@@ -2037,19 +2140,23 @@ void SerialCli::printStatus() {
                 CLI_ANSI_RESET,
                 static_cast<unsigned long>(sys.logQueueDepth),
                 static_cast<unsigned long>(sys.logQueueCapacity));
-  Serial.printf("  %s%-28s%s %lu / %lu\n",
-                CLI_ANSI_INFO,
-                "Event queue depth",
-                CLI_ANSI_RESET,
-                static_cast<unsigned long>(sys.logEventQueueDepth),
-                static_cast<unsigned long>(sys.logEventQueueCapacity));
-  Serial.printf("  %s%-28s%s %s\n", CLI_ANSI_INFO, "Queue storage (sample)", CLI_ANSI_RESET,
-                sys.logQueueUsingPsram ? "PSRAM" : "Internal");
-  Serial.printf("  %s%-28s%s %s\n", CLI_ANSI_INFO, "Queue storage (event)", CLI_ANSI_RESET,
-                sys.logEventQueueUsingPsram ? "PSRAM" : "Internal");
+  if (!compact) {
+    Serial.printf("  %s%-28s%s %lu / %lu\n",
+                  CLI_ANSI_INFO,
+                  "Event queue depth",
+                  CLI_ANSI_RESET,
+                  static_cast<unsigned long>(sys.logEventQueueDepth),
+                  static_cast<unsigned long>(sys.logEventQueueCapacity));
+    Serial.printf("  %s%-28s%s %s\n", CLI_ANSI_INFO, "Queue storage (sample)", CLI_ANSI_RESET,
+                  sys.logQueueUsingPsram ? "PSRAM" : "Internal");
+    Serial.printf("  %s%-28s%s %s\n", CLI_ANSI_INFO, "Queue storage (event)", CLI_ANSI_RESET,
+                  sys.logEventQueueUsingPsram ? "PSRAM" : "Internal");
+  }
   printCounterVal("Dropped", sys.logDroppedCount);
-  Serial.printf("  %s%-28s%s %s\n", CLI_ANSI_INFO, "Last error", CLI_ANSI_RESET, sys.logLastErrorMsg);
-  if (sys.sdInfoValid) {
+  if (!compact) {
+    Serial.printf("  %s%-28s%s %s\n", CLI_ANSI_INFO, "Last error", CLI_ANSI_RESET, sys.logLastErrorMsg);
+  }
+  if (!compact && sys.sdInfoValid) {
     Serial.printf("  %s%-28s%s %s\n", CLI_ANSI_INFO, "Filesystem", CLI_ANSI_RESET, sdFsTypeToStr(sys.sdFsType));
     Serial.printf("  %s%-28s%s %s\n", CLI_ANSI_INFO, "Card type", CLI_ANSI_RESET, sdCardTypeToStr(sys.sdCardType));
     sprintBytesHuman(buf, sizeof(buf), sys.sdFsCapacityBytes);
@@ -2069,97 +2176,125 @@ void SerialCli::printStatus() {
   printCounterVal("Errors", sys.i2cErrorCount);
   printCounterVal("Consecutive errors", sys.i2cConsecutiveErrors);
   printCounterVal("Recoveries", sys.i2cRecoveryCount);
+  Serial.printf("  %s%-28s%s %s\n", CLI_ANSI_INFO, "Backend", CLI_ANSI_RESET, sys.i2cBackendName);
   Serial.printf("  %s%-28s%s %lu\n", CLI_ANSI_INFO, "Request queue", CLI_ANSI_RESET, static_cast<unsigned long>(sys.i2cRequestQueueDepth));
   Serial.printf("  %s%-28s%s %lu\n", CLI_ANSI_INFO, "Result queue", CLI_ANSI_RESET, static_cast<unsigned long>(sys.i2cResultQueueDepth));
-  Serial.printf("  %s%-28s%s %s\n", CLI_ANSI_INFO, "Backend", CLI_ANSI_RESET, sys.i2cBackendName);
-  printCounterVal("Stuck SDA", sys.i2cStuckSdaCount);
-  printCounterVal("Fast fail", sys.i2cStuckBusFastFailCount);
-  printCounterVal("Request overflow", sys.i2cRequestOverflowCount);
-  printCounterVal("Result dropped", sys.i2cResultDroppedCount);
-  printCounterVal("Stale results", sys.i2cStaleResultCount);
-  Serial.println();
-  Serial.printf("%s[I2C Performance]%s\n", CLI_ANSI_WARN, CLI_ANSI_RESET);
-  printCounterVal("Slow ops", sys.i2cSlowOpCount);
-  printCounterVal("Recent slow ops", sys.i2cRecentSlowOpCount);
-  Serial.printf("  %s%-28s%s %lu us\n", CLI_ANSI_INFO, "Max duration", CLI_ANSI_RESET, static_cast<unsigned long>(sys.i2cMaxDurationUs));
-  Serial.printf("  %s%-28s%s %lu us\n", CLI_ANSI_INFO, "Rolling max duration", CLI_ANSI_RESET, static_cast<unsigned long>(sys.i2cRollingMaxDurationUs));
-  Serial.printf("  %s%-28s%s %lu ms\n", CLI_ANSI_INFO, "Task alive age", CLI_ANSI_RESET, static_cast<unsigned long>(sys.i2cTaskAliveAgeMs));
-  Serial.printf("  %s%-28s%s %u\n", CLI_ANSI_INFO, "Recovery stage", CLI_ANSI_RESET, static_cast<unsigned int>(sys.i2cLastRecoveryStage));
-  Serial.println();
-  Serial.printf("%s[I2C Power Cycle]%s\n", CLI_ANSI_WARN, CLI_ANSI_RESET);
-  Serial.printf("  %s%-28s%s %s\n", CLI_ANSI_INFO, "Configured", CLI_ANSI_RESET, yesNo(sys.i2cPowerCycleConfigured));
-  printCounterVal("Attempts", sys.i2cPowerCycleAttempts);
-  Serial.printf("  %s%-28s%s %lu ms\n", CLI_ANSI_INFO, "Last cycle", CLI_ANSI_RESET, static_cast<unsigned long>(sys.i2cLastPowerCycleMs));
-  Serial.printf("  %s%-28s%s %u\n", CLI_ANSI_INFO, "Last code", CLI_ANSI_RESET, static_cast<unsigned int>(sys.i2cPowerCycleLastCode));
-  Serial.printf("  %s%-28s%s %ld\n", CLI_ANSI_INFO, "Last detail", CLI_ANSI_RESET, static_cast<long>(sys.i2cPowerCycleLastDetail));
+  if (!compact) {
+    printCounterVal("Stuck SDA", sys.i2cStuckSdaCount);
+    printCounterVal("Fast fail", sys.i2cStuckBusFastFailCount);
+    printCounterVal("Request overflow", sys.i2cRequestOverflowCount);
+    printCounterVal("Result dropped", sys.i2cResultDroppedCount);
+    printCounterVal("Stale results", sys.i2cStaleResultCount);
+  }
+  if (verbose) {
+    Serial.println();
+    Serial.printf("%s[I2C Performance]%s\n", CLI_ANSI_WARN, CLI_ANSI_RESET);
+    printCounterVal("Slow ops", sys.i2cSlowOpCount);
+    printCounterVal("Recent slow ops", sys.i2cRecentSlowOpCount);
+    Serial.printf("  %s%-28s%s %lu us\n", CLI_ANSI_INFO, "Max duration", CLI_ANSI_RESET, static_cast<unsigned long>(sys.i2cMaxDurationUs));
+    Serial.printf("  %s%-28s%s %lu us\n", CLI_ANSI_INFO, "Rolling max duration", CLI_ANSI_RESET, static_cast<unsigned long>(sys.i2cRollingMaxDurationUs));
+    Serial.printf("  %s%-28s%s %lu ms\n", CLI_ANSI_INFO, "Task alive age", CLI_ANSI_RESET, static_cast<unsigned long>(sys.i2cTaskAliveAgeMs));
+    Serial.printf("  %s%-28s%s %u\n", CLI_ANSI_INFO, "Recovery stage", CLI_ANSI_RESET, static_cast<unsigned int>(sys.i2cLastRecoveryStage));
+    Serial.println();
+    Serial.printf("%s[I2C Power Cycle]%s\n", CLI_ANSI_WARN, CLI_ANSI_RESET);
+    Serial.printf("  %s%-28s%s %s\n", CLI_ANSI_INFO, "Configured", CLI_ANSI_RESET, yesNo(sys.i2cPowerCycleConfigured));
+    printCounterVal("Attempts", sys.i2cPowerCycleAttempts);
+    Serial.printf("  %s%-28s%s %lu ms\n", CLI_ANSI_INFO, "Last cycle", CLI_ANSI_RESET, static_cast<unsigned long>(sys.i2cLastPowerCycleMs));
+    Serial.printf("  %s%-28s%s %u\n", CLI_ANSI_INFO, "Last code", CLI_ANSI_RESET, static_cast<unsigned int>(sys.i2cPowerCycleLastCode));
+    Serial.printf("  %s%-28s%s %ld\n", CLI_ANSI_INFO, "Last detail", CLI_ANSI_RESET, static_cast<long>(sys.i2cPowerCycleLastDetail));
+  }
   Serial.println();
   Serial.printf("%s[WiFi]%s\n", CLI_ANSI_WARN, CLI_ANSI_RESET);
   Serial.printf("  %s%-28s%s %s\n", CLI_ANSI_INFO, "AP running", CLI_ANSI_RESET, yesNo(sys.wifiApRunning));
   Serial.printf("  %s%-28s%s %u\n", CLI_ANSI_INFO, "Stations", CLI_ANSI_RESET, static_cast<unsigned int>(sys.wifiStationCount));
   Serial.printf("  %s%-28s%s %lu\n", CLI_ANSI_INFO, "Web clients", CLI_ANSI_RESET, static_cast<unsigned long>(sys.webClientCount));
   Serial.printf("  %s%-28s%s %lu\n", CLI_ANSI_INFO, "Command queue", CLI_ANSI_RESET, static_cast<unsigned long>(sys.commandQueueDepth));
-  printCounterVal("Command overflow", sys.commandQueueOverflowCount);
-  Serial.println();
-  Serial.printf("%s[History + Web Buffers]%s\n", CLI_ANSI_WARN, CLI_ANSI_RESET);
-  Serial.printf("  %s%-28s%s %lu / %lu (%s)\n",
-                CLI_ANSI_INFO,
-                "Samples ring",
-                CLI_ANSI_RESET,
-                static_cast<unsigned long>(sys.sampleHistoryDepth),
-                static_cast<unsigned long>(sys.sampleHistoryCapacity),
-                sys.sampleHistoryUsingPsram ? "PSRAM" : "Internal");
-  Serial.printf("  %s%-28s%s %lu / %lu (%s)\n",
-                CLI_ANSI_INFO,
-                "Events ring",
-                CLI_ANSI_RESET,
-                static_cast<unsigned long>(sys.eventHistoryDepth),
-                static_cast<unsigned long>(sys.eventHistoryCapacity),
-                sys.eventHistoryUsingPsram ? "PSRAM" : "Internal");
-  Serial.printf("  %s%-28s%s %lu samples\n",
-                CLI_ANSI_INFO,
-                "Web graph scratch",
-                CLI_ANSI_RESET,
-                static_cast<unsigned long>(sys.webGraphScratchCapacity));
-  Serial.printf("  %s%-28s%s %lu events\n",
-                CLI_ANSI_INFO,
-                "Web event scratch",
-                CLI_ANSI_RESET,
-                static_cast<unsigned long>(sys.webEventScratchCapacity));
-  Serial.printf("  %s%-28s%s %s\n", CLI_ANSI_INFO, "Web scratch storage", CLI_ANSI_RESET,
-                sys.webScratchUsingPsram ? "PSRAM" : "Internal");
-  Serial.println();
-  Serial.printf("%s[Memory]%s\n", CLI_ANSI_WARN, CLI_ANSI_RESET);
-  sprintBytesHuman(buf, sizeof(buf), sys.heapFreeBytes);
-  Serial.printf("  %s%-28s%s %s\n", CLI_ANSI_INFO, "Heap free", CLI_ANSI_RESET, buf);
-  sprintBytesHuman(buf, sizeof(buf), sys.heapMinFreeBytes);
-  Serial.printf("  %s%-28s%s %s\n", CLI_ANSI_INFO, "Heap min free", CLI_ANSI_RESET, buf);
-  sprintBytesHuman(buf, sizeof(buf), sys.heapMaxAllocBytes);
-  Serial.printf("  %s%-28s%s %s\n", CLI_ANSI_INFO, "Heap max alloc", CLI_ANSI_RESET, buf);
-  Serial.printf("  %s%-28s%s %s\n", CLI_ANSI_INFO, "PSRAM available", CLI_ANSI_RESET, yesNo(sys.psramAvailable));
-  if (sys.psramAvailable) {
-    sprintBytesHuman(buf, sizeof(buf), sys.psramTotalBytes);
-    Serial.printf("  %s%-28s%s %s\n", CLI_ANSI_INFO, "PSRAM total", CLI_ANSI_RESET, buf);
-    sprintBytesHuman(buf, sizeof(buf), sys.psramFreeBytes);
-    Serial.printf("  %s%-28s%s %s\n", CLI_ANSI_INFO, "PSRAM free", CLI_ANSI_RESET, buf);
-    sprintBytesHuman(buf, sizeof(buf), sys.psramMinFreeBytes);
-    Serial.printf("  %s%-28s%s %s\n", CLI_ANSI_INFO, "PSRAM min free", CLI_ANSI_RESET, buf);
-    sprintBytesHuman(buf, sizeof(buf), sys.psramMaxAllocBytes);
-    Serial.printf("  %s%-28s%s %s\n", CLI_ANSI_INFO, "PSRAM max alloc", CLI_ANSI_RESET, buf);
+  if (!compact) {
+    printCounterVal("Command overflow", sys.commandQueueOverflowCount);
+  }
+  if (verbose) {
+    Serial.println();
+    Serial.printf("%s[History + Web Buffers]%s\n", CLI_ANSI_WARN, CLI_ANSI_RESET);
+    Serial.printf("  %s%-28s%s %lu / %lu (%s)\n",
+                  CLI_ANSI_INFO,
+                  "Samples ring",
+                  CLI_ANSI_RESET,
+                  static_cast<unsigned long>(sys.sampleHistoryDepth),
+                  static_cast<unsigned long>(sys.sampleHistoryCapacity),
+                  sys.sampleHistoryUsingPsram ? "PSRAM" : "Internal");
+    Serial.printf("  %s%-28s%s %lu / %lu (%s)\n",
+                  CLI_ANSI_INFO,
+                  "Events ring",
+                  CLI_ANSI_RESET,
+                  static_cast<unsigned long>(sys.eventHistoryDepth),
+                  static_cast<unsigned long>(sys.eventHistoryCapacity),
+                  sys.eventHistoryUsingPsram ? "PSRAM" : "Internal");
+    Serial.printf("  %s%-28s%s %lu samples\n",
+                  CLI_ANSI_INFO,
+                  "Web graph scratch",
+                  CLI_ANSI_RESET,
+                  static_cast<unsigned long>(sys.webGraphScratchCapacity));
+    Serial.printf("  %s%-28s%s %lu events\n",
+                  CLI_ANSI_INFO,
+                  "Web event scratch",
+                  CLI_ANSI_RESET,
+                  static_cast<unsigned long>(sys.webEventScratchCapacity));
+    Serial.printf("  %s%-28s%s %s\n", CLI_ANSI_INFO, "Web scratch storage", CLI_ANSI_RESET,
+                  sys.webScratchUsingPsram ? "PSRAM" : "Internal");
+    Serial.println();
+    Serial.printf("%s[Memory]%s\n", CLI_ANSI_WARN, CLI_ANSI_RESET);
+    sprintBytesHuman(buf, sizeof(buf), sys.heapFreeBytes);
+    Serial.printf("  %s%-28s%s %s\n", CLI_ANSI_INFO, "Heap free", CLI_ANSI_RESET, buf);
+    sprintBytesHuman(buf, sizeof(buf), sys.heapMinFreeBytes);
+    Serial.printf("  %s%-28s%s %s\n", CLI_ANSI_INFO, "Heap min free", CLI_ANSI_RESET, buf);
+    sprintBytesHuman(buf, sizeof(buf), sys.heapMaxAllocBytes);
+    Serial.printf("  %s%-28s%s %s\n", CLI_ANSI_INFO, "Heap max alloc", CLI_ANSI_RESET, buf);
+    Serial.printf("  %s%-28s%s %s\n", CLI_ANSI_INFO, "PSRAM available", CLI_ANSI_RESET, yesNo(sys.psramAvailable));
+    if (sys.psramAvailable) {
+      sprintBytesHuman(buf, sizeof(buf), sys.psramTotalBytes);
+      Serial.printf("  %s%-28s%s %s\n", CLI_ANSI_INFO, "PSRAM total", CLI_ANSI_RESET, buf);
+      sprintBytesHuman(buf, sizeof(buf), sys.psramFreeBytes);
+      Serial.printf("  %s%-28s%s %s\n", CLI_ANSI_INFO, "PSRAM free", CLI_ANSI_RESET, buf);
+      sprintBytesHuman(buf, sizeof(buf), sys.psramMinFreeBytes);
+      Serial.printf("  %s%-28s%s %s\n", CLI_ANSI_INFO, "PSRAM min free", CLI_ANSI_RESET, buf);
+      sprintBytesHuman(buf, sizeof(buf), sys.psramMaxAllocBytes);
+      Serial.printf("  %s%-28s%s %s\n", CLI_ANSI_INFO, "PSRAM max alloc", CLI_ANSI_RESET, buf);
+    }
   }
   Serial.println();
   if (hasLatest) {
     Serial.printf("%s[Latest Sample]%s\n", CLI_ANSI_WARN, CLI_ANSI_RESET);
     Serial.printf("  %s%-28s%s %lu\n", CLI_ANSI_INFO, "Timestamp (unix)", CLI_ANSI_RESET, static_cast<unsigned long>(latest.tsUnix));
     Serial.printf("  %s%-28s%s %s\n", CLI_ANSI_INFO, "Local time", CLI_ANSI_RESET, latest.tsLocal);
-    Serial.printf("  %s%-28s%s %.1f ppm\n", CLI_ANSI_INFO, "CO2", CLI_ANSI_RESET, static_cast<double>(latest.co2ppm));
-    Serial.printf("  %s%-28s%s %.2f C\n", CLI_ANSI_INFO, "Temperature", CLI_ANSI_RESET, static_cast<double>(latest.tempC));
-    Serial.printf("  %s%-28s%s %.2f %%\n", CLI_ANSI_INFO, "Humidity", CLI_ANSI_RESET, static_cast<double>(latest.rhPct));
-    Serial.printf("  %s%-28s%s %.2f hPa\n", CLI_ANSI_INFO, "Pressure", CLI_ANSI_RESET, static_cast<double>(latest.pressureHpa));
-    Serial.printf("  %s%-28s%s 0x%02X\n", CLI_ANSI_INFO, "Valid mask", CLI_ANSI_RESET, static_cast<unsigned int>(latest.validMask));
+    Serial.printf("  %s%-28s%s %u cm\n", CLI_ANSI_INFO, "Distance", CLI_ANSI_RESET, static_cast<unsigned int>(latest.distanceCm));
+    Serial.printf("  %s%-28s%s %u\n", CLI_ANSI_INFO, "Strength", CLI_ANSI_RESET, static_cast<unsigned int>(latest.strength));
+    Serial.printf("  %s%-28s%s %.2f C\n", CLI_ANSI_INFO, "LiDAR temp", CLI_ANSI_RESET, static_cast<double>(latest.lidarTempC));
+    Serial.printf("  %s%-28s%s %s\n", CLI_ANSI_INFO, "Valid frame", CLI_ANSI_RESET, yesNo(latest.validFrame));
+    Serial.printf("  %s%-28s%s %s\n", CLI_ANSI_INFO, "Signal OK", CLI_ANSI_RESET, yesNo(latest.signalOk));
+    if (!compact) {
+      Serial.printf("  %s%-28s%s %.2f C\n", CLI_ANSI_INFO, "Temperature", CLI_ANSI_RESET, static_cast<double>(latest.tempC));
+      Serial.printf("  %s%-28s%s %.2f %%\n", CLI_ANSI_INFO, "Humidity", CLI_ANSI_RESET, static_cast<double>(latest.rhPct));
+      Serial.printf("  %s%-28s%s %.2f hPa\n", CLI_ANSI_INFO, "Pressure", CLI_ANSI_RESET, static_cast<double>(latest.pressureHpa));
+    }
+    if (verbose) {
+      Serial.printf("  %s%-28s%s 0x%02X\n", CLI_ANSI_INFO, "Valid mask", CLI_ANSI_RESET, static_cast<unsigned int>(latest.validMask));
+    }
   } else {
     Serial.printf("%s[Latest Sample]%s\n", CLI_ANSI_WARN, CLI_ANSI_RESET);
     Serial.printf("  %s%-28s%s none\n", CLI_ANSI_INFO, "Data", CLI_ANSI_RESET);
   }
+}
+
+uint8_t SerialCli::currentVerbosity() const {
+  RuntimeSettings settings{};
+  if (!_app.tryGetSettingsSnapshot(settings)) {
+    return 1U;
+  }
+  if (settings.cliVerbosity < RuntimeSettings::MIN_CLI_VERBOSITY ||
+      settings.cliVerbosity > RuntimeSettings::MAX_CLI_VERBOSITY) {
+    return 1U;
+  }
+  return settings.cliVerbosity;
 }
 
 bool SerialCli::loadDeviceStatuses(size_t& outCount) {
@@ -2180,6 +2315,8 @@ const DeviceStatus* SerialCli::findDeviceInScratch(const char* name, size_t coun
 }
 
 void SerialCli::printDevices() {
+  const uint8_t verbosity = currentVerbosity();
+  const bool verbose = verbosity >= 2U;
   size_t count = 0;
   if (!loadDeviceStatuses(count)) {
     Serial.println("ERR state busy");
@@ -2187,13 +2324,25 @@ void SerialCli::printDevices() {
   }
   for (size_t i = 0; i < count; ++i) {
     const DeviceStatus& st = _deviceScratch[i];
-    Serial.printf("[%lu] %-8s health=%-8s code=%s detail=%ld msg='%s'\n",
-                  static_cast<unsigned long>(i),
-                  st.name,
-                  healthToStrColored(st.health),
-                  errToStrColored(st.lastStatus.code),
-                  static_cast<long>(st.lastStatus.detail),
-                  st.lastStatus.msg);
+    if (verbose) {
+      Serial.printf("[%lu] %-8s health=%-8s code=%s detail=%ld last_ok=%lu last_err=%lu last_act=%lu msg='%s'\n",
+                    static_cast<unsigned long>(i),
+                    st.name,
+                    healthToStrColored(st.health),
+                    errToStrColored(st.lastStatus.code),
+                    static_cast<long>(st.lastStatus.detail),
+                    static_cast<unsigned long>(st.lastOkMs),
+                    static_cast<unsigned long>(st.lastErrorMs),
+                    static_cast<unsigned long>(st.lastActivityMs),
+                    st.lastStatus.msg);
+    } else {
+      Serial.printf("[%lu] %-8s health=%-8s code=%s msg='%s'\n",
+                    static_cast<unsigned long>(i),
+                    st.name,
+                    healthToStrColored(st.health),
+                    errToStrColored(st.lastStatus.code),
+                    st.lastStatus.msg);
+    }
   }
 }
 
@@ -2202,6 +2351,9 @@ void SerialCli::printDevice(const char* name) {
     Serial.println("ERR device name missing");
     return;
   }
+
+  const uint8_t verbosity = currentVerbosity();
+  const bool compact = verbosity == 0U;
 
   size_t count = 0;
   if (!loadDeviceStatuses(count)) {
@@ -2295,7 +2447,7 @@ void SerialCli::printDevice(const char* name) {
   }
 
   if (strcmp(found->name, "rtc") == 0) {
-    if (haveSettings) {
+    if (!compact && haveSettings) {
       Serial.println();
       printSection("RTC Configuration");
       printHex8Val("I2C address", settings.i2cRtcAddress);
@@ -2316,7 +2468,7 @@ void SerialCli::printDevice(const char* name) {
   }
 
   if (strcmp(found->name, "env") == 0) {
-    if (haveSettings) {
+    if (!compact && haveSettings) {
       Serial.println();
       printSection("ENV Configuration");
       printHex8Val("I2C address", settings.i2cEnvAddress);
@@ -2361,7 +2513,7 @@ void SerialCli::printDevice(const char* name) {
     printCounterU32("Dropped writes", sys.logDroppedCount);
     printCounterU32("Dropped events", sys.logEventDroppedCount);
     printU32Val("Last write age", sys.logLastWriteAgeMs, "ms");
-    if (sys.sdInfoValid) {
+    if (!compact && sys.sdInfoValid) {
       uint32_t usagePct = 0U;
       if (sys.sdUsageValid && sys.sdFsCapacityBytes > 0U) {
         const uint64_t pct = (sys.sdFsUsedBytes * 100ULL) / sys.sdFsCapacityBytes;
@@ -2383,39 +2535,54 @@ void SerialCli::printDevice(const char* name) {
     }
   }
 
-  if (strcmp(found->name, "co2") == 0) {
+  if (strcmp(found->name, "lidar") == 0) {
     if (haveSettings) {
       Serial.println();
-      printSection("CO2 Configuration");
-      printU32Val("E2 address", settings.e2Address);
-      printU32Val("Bit timeout", settings.e2BitTimeoutUs, "us");
-      printU32Val("Byte timeout", settings.e2ByteTimeoutUs, "us");
-      printU32Val("Offline threshold", settings.e2OfflineThreshold);
-      printU32Val("Recovery backoff", settings.e2RecoveryBackoffMs, "ms");
-      printU32Val("Recovery backoff max", settings.e2RecoveryBackoffMaxMs, "ms");
+      printSection("TF-Luna Configuration");
+      printU32Val("UART service", settings.lidarServiceMs, "ms");
+      printU32Val("Minimum strength", settings.lidarMinStrength);
+      printU32Val("Maximum distance", settings.lidarMaxDistanceCm, "cm");
+      printU32Val("Frame stale", settings.lidarFrameStaleMs, "ms");
+      printU32Val("Serial summary", settings.serialPrintIntervalMs, "ms");
+      {
+        char verbosityBuf[24];
+        snprintf(verbosityBuf,
+                 sizeof(verbosityBuf),
+                 "%s (%u)",
+                 cliVerbosityToStr(settings.cliVerbosity),
+                 static_cast<unsigned int>(settings.cliVerbosity));
+        printVal("CLI verbosity", verbosityBuf);
+      }
       Serial.println();
-      printSection("CO2 Timing");
-      printU32Val("Clock low", settings.e2ClockLowUs, "us");
-      printU32Val("Clock high", settings.e2ClockHighUs, "us");
-      printU32Val("Start hold", settings.e2StartHoldUs, "us");
-      printU32Val("Stop hold", settings.e2StopHoldUs, "us");
-      printU32Val("Write delay", settings.e2WriteDelayMs, "ms");
-      printU32Val("Interval write delay", settings.e2IntervalWriteDelayMs, "ms");
-      Serial.println();
-      printSection("CO2 Managed Config");
-      printU32Val("Interval", settings.e2ConfigIntervalDs, "ds");
-      printI32Val("CO2 interval factor", static_cast<int32_t>(settings.e2ConfigCo2IntervalFactor));
-      printU32Val("Filter", settings.e2ConfigFilter);
-      printU32Val("Operating mode", settings.e2ConfigOperatingMode);
-      printI32Val("Offset", static_cast<int32_t>(settings.e2ConfigOffsetPpm), "ppm");
-      printU32Val("Gain", settings.e2ConfigGain);
+      printSection("TF-Luna Wiring");
+      printI32Val("ESP32 RX pin", hw.lidarRx);
+      printI32Val("ESP32 TX pin", hw.lidarTx);
+      printU32Val("UART index", hw.lidarUartIndex);
+      printVal("Mapping", "sensor TX -> ESP RX, sensor RX -> ESP TX");
+      if (!compact && haveSys) {
+        Serial.println();
+        printSection("TF-Luna Stats");
+        printU32Val("Frames parsed", sys.lidarFramesParsed);
+        printU32Val("Checksum errors", sys.lidarChecksumErrors);
+        printU32Val("Sync loss", sys.lidarSyncLossCount);
+        printU32Val("Frame age", sys.lidarFrameAgeMs, "ms");
+      }
     }
     if (hasLatest) {
-      const bool valid = (latest.validMask & VALID_CO2) != 0U;
+      const bool valid = latest.validFrame;
       Serial.println();
-      printSection("CO2 Latest");
-      printBoolVal("Valid", valid);
-      printFloatVal("CO2", latest.co2ppm, "ppm");
+      printSection("TF-Luna Latest");
+      printBoolVal("Valid frame", valid);
+      printBoolVal("Signal OK", latest.signalOk);
+      printU32Val("Distance", latest.distanceCm, "cm");
+      printU32Val("Strength", latest.strength);
+      printFloatVal("Temperature", latest.lidarTempC, "C");
+      if (haveSys && sys.lidarStats.hasDistanceStats) {
+        printFloatVal("Minimum", sys.lidarStats.minDistanceCm, "cm");
+        printFloatVal("Maximum", sys.lidarStats.maxDistanceCm, "cm");
+        printFloatVal("Mean", sys.lidarStats.meanDistanceCm, "cm");
+        printFloatVal("Stddev", sys.lidarStats.stddevDistanceCm, "cm");
+      }
     }
   }
 
@@ -2432,7 +2599,7 @@ void SerialCli::printDevice(const char* name) {
     Serial.println();
     printSection("Output Control");
     printVal("Override mode", overrideModeToStr(mode));
-    if (haveSettings) {
+    if (!compact && haveSettings) {
       printBoolVal("Enabled", settings.outputsEnabled);
       printVal("Source", cliOutputSourceToStr(settings.outputSource));
       printFloatVal("CO2 ON threshold", settings.co2OnPpm, "ppm");
@@ -2461,7 +2628,7 @@ void SerialCli::printDevice(const char* name) {
     printBoolVal("AP running", sys.wifiApRunning);
     printU32Val("Connected stations", sys.wifiStationCount);
     printU32Val("Web clients", sys.webClientCount);
-    if (haveSettings) {
+    if (!compact && haveSettings) {
       Serial.println();
       printSection("WiFi Configuration");
       printBoolVal("Enabled", settings.wifiEnabled);
@@ -2478,9 +2645,11 @@ void SerialCli::printDevice(const char* name) {
     printSection("Web Server State");
     printU32Val("Active clients", sys.webClientCount);
     printU32Val("Command queue depth", sys.commandQueueDepth);
-    printCounterU32("Command overflows", sys.commandQueueOverflowCount);
-    printU32Val("Last overflow", sys.commandQueueLastOverflowMs, "ms");
-    if (haveSettings) {
+    if (!compact) {
+      printCounterU32("Command overflows", sys.commandQueueOverflowCount);
+      printU32Val("Last overflow", sys.commandQueueLastOverflowMs, "ms");
+    }
+    if (!compact && haveSettings) {
       Serial.println();
       printSection("Web Configuration");
       printU32Val("Max settings body", settings.webMaxSettingsBodyBytes, "B");
@@ -2497,7 +2666,7 @@ void SerialCli::printDevice(const char* name) {
     printU32Val("Health LED index", hw.healthLedIndex);
     printU32Val("Brightness", hw.ledBrightness);
     printU32Val("Smooth step", hw.ledSmoothStepMs, "ms");
-    if (haveSettings) {
+    if (!compact && haveSettings) {
       Serial.println();
       printSection("LED Configuration");
       printU32Val("Health init grace", settings.ledHealthInitMs, "ms");
@@ -2516,13 +2685,6 @@ void SerialCli::printDevice(const char* name) {
     printU32Val("Multi-press count", hw.buttonMultiPressCount);
   }
 
-  if (strcmp(found->name, "rs485") == 0) {
-    Serial.println();
-    printSection("RS485 Hardware");
-    printI32Val("TX pin", hw.rs485Tx);
-    printI32Val("RX pin", hw.rs485Rx);
-    printI32Val("DE pin", hw.rs485De);
-  }
 }
 
 void SerialCli::printSamples(size_t count) {
@@ -2535,11 +2697,15 @@ void SerialCli::printSamples(size_t count) {
   Serial.printf("%s[Samples]%s  count=%lu\n", CLI_ANSI_WARN, CLI_ANSI_RESET, static_cast<unsigned long>(got));
   for (size_t i = 0; i < got; ++i) {
     const Sample& s = samples[i];
-    Serial.printf("  %s%-4lu%s ts=%lu  local='%s'  co2=%.1f  temp=%.2f  rh=%.2f  p=%.2f  mask=0x%02X\n",
+    Serial.printf("  %s%-4lu%s ts=%lu local='%s' dist=%ucm strength=%u temp_lidar=%.2f frame=%u signal=%u env_t=%.2f rh=%.2f p=%.2f mask=0x%02X\n",
                   CLI_ANSI_INFO, static_cast<unsigned long>(i), CLI_ANSI_RESET,
                   static_cast<unsigned long>(s.tsUnix),
                   s.tsLocal,
-                  static_cast<double>(s.co2ppm),
+                  static_cast<unsigned int>(s.distanceCm),
+                  static_cast<unsigned int>(s.strength),
+                  static_cast<double>(s.lidarTempC),
+                  s.validFrame ? 1U : 0U,
+                  s.signalOk ? 1U : 0U,
                   static_cast<double>(s.tempC),
                   static_cast<double>(s.rhPct),
                   static_cast<double>(s.pressureHpa),
@@ -2567,30 +2733,44 @@ void SerialCli::printEvents(size_t count) {
 }
 
 void SerialCli::printRead(const char* which) {
+  const uint8_t verbosity = currentVerbosity();
+  const bool compact = verbosity == 0U;
+  const bool verbose = verbosity >= 2U;
   Sample latest{};
   if (!_app.getLatestSample(latest)) {
     Serial.println("ERR no sample");
     return;
   }
-  if (which == nullptr || strcmp(which, "all") == 0) {
+  const char* normalized = normalizeDeviceName(which);
+  if (normalized == nullptr || strcmp(normalized, "all") == 0) {
     Serial.printf("%s[Latest Reading]%s\n", CLI_ANSI_WARN, CLI_ANSI_RESET);
     Serial.printf("  %s%-28s%s %lu\n", CLI_ANSI_INFO, "Timestamp (unix)", CLI_ANSI_RESET, static_cast<unsigned long>(latest.tsUnix));
     Serial.printf("  %s%-28s%s %s\n", CLI_ANSI_INFO, "Local time", CLI_ANSI_RESET, latest.tsLocal);
-    Serial.printf("  %s%-28s%s 0x%02X\n", CLI_ANSI_INFO, "Valid mask", CLI_ANSI_RESET, static_cast<unsigned int>(latest.validMask));
-    Serial.printf("  %s%-28s%s %.1f ppm\n", CLI_ANSI_INFO, "CO2", CLI_ANSI_RESET, static_cast<double>(latest.co2ppm));
-    Serial.printf("  %s%-28s%s %.2f C\n", CLI_ANSI_INFO, "Temperature", CLI_ANSI_RESET, static_cast<double>(latest.tempC));
-    Serial.printf("  %s%-28s%s %.2f %%\n", CLI_ANSI_INFO, "Humidity", CLI_ANSI_RESET, static_cast<double>(latest.rhPct));
-    Serial.printf("  %s%-28s%s %.2f hPa\n", CLI_ANSI_INFO, "Pressure", CLI_ANSI_RESET, static_cast<double>(latest.pressureHpa));
+    Serial.printf("  %s%-28s%s %u cm\n", CLI_ANSI_INFO, "Distance", CLI_ANSI_RESET, static_cast<unsigned int>(latest.distanceCm));
+    Serial.printf("  %s%-28s%s %u\n", CLI_ANSI_INFO, "Strength", CLI_ANSI_RESET, static_cast<unsigned int>(latest.strength));
+    Serial.printf("  %s%-28s%s %.2f C\n", CLI_ANSI_INFO, "LiDAR temp", CLI_ANSI_RESET, static_cast<double>(latest.lidarTempC));
+    Serial.printf("  %s%-28s%s %s\n", CLI_ANSI_INFO, "Valid frame", CLI_ANSI_RESET, yesNo(latest.validFrame));
+    Serial.printf("  %s%-28s%s %s\n", CLI_ANSI_INFO, "Signal OK", CLI_ANSI_RESET, yesNo(latest.signalOk));
+    if (!compact) {
+      Serial.printf("  %s%-28s%s %.2f C\n", CLI_ANSI_INFO, "Temperature", CLI_ANSI_RESET, static_cast<double>(latest.tempC));
+      Serial.printf("  %s%-28s%s %.2f %%\n", CLI_ANSI_INFO, "Humidity", CLI_ANSI_RESET, static_cast<double>(latest.rhPct));
+      Serial.printf("  %s%-28s%s %.2f hPa\n", CLI_ANSI_INFO, "Pressure", CLI_ANSI_RESET, static_cast<double>(latest.pressureHpa));
+    }
+    if (verbose) {
+      Serial.printf("  %s%-28s%s 0x%02X\n", CLI_ANSI_INFO, "Valid mask", CLI_ANSI_RESET, static_cast<unsigned int>(latest.validMask));
+    }
     return;
   }
-  if (strcmp(which, "co2") == 0) {
-    const bool valid = (latest.validMask & VALID_CO2) != 0U;
-    Serial.printf("%s[CO2 Reading]%s\n", CLI_ANSI_WARN, CLI_ANSI_RESET);
-    Serial.printf("  %s%-28s%s %s\n", CLI_ANSI_INFO, "Valid", CLI_ANSI_RESET, yesNo(valid));
-    Serial.printf("  %s%-28s%s %.1f ppm\n", CLI_ANSI_INFO, "Value", CLI_ANSI_RESET, static_cast<double>(latest.co2ppm));
+  if (strcmp(normalized, "lidar") == 0) {
+    Serial.printf("%s[TF-Luna Reading]%s\n", CLI_ANSI_WARN, CLI_ANSI_RESET);
+    Serial.printf("  %s%-28s%s %s\n", CLI_ANSI_INFO, "Valid frame", CLI_ANSI_RESET, yesNo(latest.validFrame));
+    Serial.printf("  %s%-28s%s %s\n", CLI_ANSI_INFO, "Signal OK", CLI_ANSI_RESET, yesNo(latest.signalOk));
+    Serial.printf("  %s%-28s%s %u cm\n", CLI_ANSI_INFO, "Distance", CLI_ANSI_RESET, static_cast<unsigned int>(latest.distanceCm));
+    Serial.printf("  %s%-28s%s %u\n", CLI_ANSI_INFO, "Strength", CLI_ANSI_RESET, static_cast<unsigned int>(latest.strength));
+    Serial.printf("  %s%-28s%s %.2f C\n", CLI_ANSI_INFO, "Temperature", CLI_ANSI_RESET, static_cast<double>(latest.lidarTempC));
     return;
   }
-  if (strcmp(which, "env") == 0) {
+  if (strcmp(normalized, "env") == 0) {
     const bool tempValid = (latest.validMask & VALID_TEMP) != 0U;
     const bool rhValid = (latest.validMask & VALID_RH) != 0U;
     const bool pValid = (latest.validMask & VALID_PRESSURE) != 0U;
@@ -2600,13 +2780,13 @@ void SerialCli::printRead(const char* which) {
     Serial.printf("  %s%-28s%s %s  %.2f hPa\n", CLI_ANSI_INFO, "Pressure", CLI_ANSI_RESET, validInvalid(pValid), static_cast<double>(latest.pressureHpa));
     return;
   }
-  if (strcmp(which, "rtc") == 0) {
+  if (strcmp(normalized, "rtc") == 0) {
     Serial.printf("%s[RTC Reading]%s\n", CLI_ANSI_WARN, CLI_ANSI_RESET);
     Serial.printf("  %s%-28s%s %lu\n", CLI_ANSI_INFO, "Timestamp (unix)", CLI_ANSI_RESET, static_cast<unsigned long>(latest.tsUnix));
     Serial.printf("  %s%-28s%s %s\n", CLI_ANSI_INFO, "Local time", CLI_ANSI_RESET, latest.tsLocal);
     return;
   }
-  Serial.println("ERR read target must be all|co2|env|rtc");
+  Serial.println("ERR read target must be all|lidar|env|rtc");
 }
 
 void SerialCli::printSettings(const char* section) {
@@ -2615,7 +2795,7 @@ void SerialCli::printSettings(const char* section) {
     resolved = "all";
   }
   if (strcmp(resolved, "all") != 0 && !isSettingGroup(resolved)) {
-    Serial.printf("%sERR%s section must be all|log|sd|i2c|env|rtc|display|co2|e2|wifi|outputs|system|leds|web\n",
+    Serial.printf("%sERR%s section must be all|log|sd|lidar|tfluna|i2c|env|rtc|display|wifi|outputs|system|leds|web\n",
                   CLI_ANSI_ERR,
                   CLI_ANSI_RESET);
     printHint("help settings");
@@ -2631,11 +2811,12 @@ void SerialCli::printSettings(const char* section) {
   const bool showAll = strcmp(resolved, "all") == 0;
   const bool showSystem = showAll || strcmp(resolved, "system") == 0 || strcmp(resolved, "leds") == 0;
   const bool showLog = showAll || strcmp(resolved, "log") == 0 || strcmp(resolved, "sd") == 0;
+  const bool showLidar = showAll || strcmp(resolved, "lidar") == 0 || strcmp(resolved, "tfluna") == 0 ||
+                         strcmp(resolved, "co2") == 0 || strcmp(resolved, "e2") == 0;
   const bool showI2c = showAll || strcmp(resolved, "i2c") == 0;
   const bool showEnv = showI2c || strcmp(resolved, "env") == 0;
   const bool showRtc = showI2c || strcmp(resolved, "rtc") == 0;
   const bool showDisplay = showI2c || strcmp(resolved, "display") == 0;
-  const bool showCo2 = showAll || strcmp(resolved, "co2") == 0 || strcmp(resolved, "e2") == 0;
   const bool showWifi = showAll || strcmp(resolved, "wifi") == 0;
   const bool showOutputs = showAll || strcmp(resolved, "outputs") == 0;
   const bool showWeb = showAll || strcmp(resolved, "web") == 0;
@@ -2680,18 +2861,6 @@ void SerialCli::printSettings(const char* section) {
                     unit);
     }
   };
-  auto printI32 = [&](const char* name, int32_t value, const char* unit = "") {
-    if (unit[0] == '\0') {
-      Serial.printf("  %s%-28s%s %ld\n", CLI_ANSI_INFO, name, CLI_ANSI_RESET, static_cast<long>(value));
-    } else {
-      Serial.printf("  %s%-28s%s %ld %s\n",
-                    CLI_ANSI_INFO,
-                    name,
-                    CLI_ANSI_RESET,
-                    static_cast<long>(value),
-                    unit);
-    }
-  };
   auto printFloat = [&](const char* name, float value, const char* unit = "") {
     if (unit[0] == '\0') {
       Serial.printf("  %s%-28s%s %.2f\n", CLI_ANSI_INFO, name, CLI_ANSI_RESET, static_cast<double>(value));
@@ -2730,7 +2899,13 @@ void SerialCli::printSettings(const char* section) {
 
   if (showSystem) {
     beginSection("System");
-    printU32("Sample interval", s.sampleIntervalSec, "s");
+    printU32("Sample interval", s.sampleIntervalMs, "ms");
+    Serial.printf("  %s%-28s%s %s (%u)\n",
+                  CLI_ANSI_INFO,
+                  "CLI verbosity",
+                  CLI_ANSI_RESET,
+                  cliVerbosityToStr(s.cliVerbosity),
+                  static_cast<unsigned int>(s.cliVerbosity));
     printU32("Command drain per tick", s.commandDrainPerTick);
     printU32("Queue degraded window", s.commandQueueDegradedWindowMs, "ms");
     printU32("Queue depth threshold", s.commandQueueDegradedDepthThreshold);
@@ -2826,27 +3001,13 @@ void SerialCli::printSettings(const char* section) {
     printHex8("I2C address", s.i2cDisplayAddress);
   }
 
-  if (showCo2) {
-    beginSection("CO2 (EE871 / E2 bus)");
-    printU32("Device address", s.e2Address);
-    printU32("Bit timeout", s.e2BitTimeoutUs, "us");
-    printU32("Byte timeout", s.e2ByteTimeoutUs, "us");
-    printU32("Clock low", s.e2ClockLowUs, "us");
-    printU32("Clock high", s.e2ClockHighUs, "us");
-    printU32("Start hold", s.e2StartHoldUs, "us");
-    printU32("Stop hold", s.e2StopHoldUs, "us");
-    printU32("Write delay", s.e2WriteDelayMs, "ms");
-    printU32("Interval write delay", s.e2IntervalWriteDelayMs, "ms");
-    printU32("Offline threshold", s.e2OfflineThreshold);
-    printU32("Recovery backoff base", s.e2RecoveryBackoffMs, "ms");
-    printU32("Recovery backoff max", s.e2RecoveryBackoffMaxMs, "ms");
-    printU32("Cfg interval", s.e2ConfigIntervalDs, "ds");
-    printI32("Cfg interval factor", s.e2ConfigCo2IntervalFactor);
-    printU32("Cfg filter", s.e2ConfigFilter);
-    printU32("Cfg operating mode", s.e2ConfigOperatingMode);
-    printI32("Cfg offset", s.e2ConfigOffsetPpm, "ppm");
-    printU32("Cfg gain", s.e2ConfigGain);
-    printHint("use 'co2 cfg <field> off' to write disabled sentinel values");
+  if (showLidar) {
+    beginSection("TF-Luna");
+    printU32("UART service", s.lidarServiceMs, "ms");
+    printU32("Minimum strength", s.lidarMinStrength);
+    printU32("Maximum distance", s.lidarMaxDistanceCm, "cm");
+    printU32("Frame stale threshold", s.lidarFrameStaleMs, "ms");
+    printU32("Serial summary interval", s.serialPrintIntervalMs, "ms");
   }
 
   if (showWifi) {
@@ -2923,7 +3084,10 @@ void SerialCli::printBootConfig(const char* which) {
                   hw.sdCdPin,
                   hw.sdCdActiveLow ? 1U : 0U);
     Serial.printf("e2_tx=%d e2_rx=%d e2_en=%d\n", hw.e2Tx, hw.e2Rx, hw.e2En);
-    Serial.printf("rs485_tx=%d rs485_rx=%d rs485_de=%d\n", hw.rs485Tx, hw.rs485Rx, hw.rs485De);
+    Serial.printf("lidar_rx=%d lidar_tx=%d lidar_uart=%u (sensor_tx->esp_rx sensor_rx->esp_tx)\n",
+                  hw.lidarRx,
+                  hw.lidarTx,
+                  static_cast<unsigned int>(hw.lidarUartIndex));
     Serial.printf("button_pin=%d button_active_low=%u debounce_ms=%lu long_press_ms=%lu multi_window_ms=%lu multi_count=%u\n",
                   hw.buttonPin,
                   hw.buttonActiveLow ? 1U : 0U,
@@ -2994,28 +3158,32 @@ void SerialCli::printSettableKeys(const char* group) {
     resolved = "all";
   }
   if (strcmp(resolved, "all") != 0 && !isSettingGroup(resolved)) {
-    Serial.println("ERR group must be all|system|leds|log|sd|i2c|env|rtc|display|co2|e2|wifi|outputs|web");
+    Serial.println("ERR group must be all|system|leds|log|sd|lidar|tfluna|i2c|env|rtc|display|wifi|outputs|web");
     return;
   }
 
   const bool showAll = strcmp(resolved, "all") == 0;
   const bool showSystem = showAll || strcmp(resolved, "system") == 0 || strcmp(resolved, "leds") == 0;
   const bool showLog = showAll || strcmp(resolved, "log") == 0 || strcmp(resolved, "sd") == 0;
+  const bool showLidar = showAll || strcmp(resolved, "lidar") == 0 || strcmp(resolved, "tfluna") == 0 ||
+                         strcmp(resolved, "co2") == 0 || strcmp(resolved, "e2") == 0;
   const bool showI2c = showAll || strcmp(resolved, "i2c") == 0;
   const bool showEnv = showAll || strcmp(resolved, "env") == 0;
   const bool showRtc = showAll || strcmp(resolved, "rtc") == 0;
   const bool showDisplay = showAll || strcmp(resolved, "display") == 0;
-  const bool showCo2 = showAll || strcmp(resolved, "co2") == 0 || strcmp(resolved, "e2") == 0;
   const bool showWifi = showAll || strcmp(resolved, "wifi") == 0;
   const bool showOutputs = showAll || strcmp(resolved, "outputs") == 0;
   const bool showWeb = showAll || strcmp(resolved, "web") == 0;
 
   Serial.printf("set list group=%s\n", resolved);
   if (showSystem) {
-    Serial.println("system: sample_interval_sec command_drain_per_tick command_queue_degraded_window_ms command_queue_degraded_depth_threshold output_data_stale_min_ms main_tick_slow_threshold_us led_health_init_ms led_health_debounce_ms ap_start_retry_backoff_ms");
+    Serial.println("system: sample_interval_ms cli_verbosity command_drain_per_tick command_queue_degraded_window_ms command_queue_degraded_depth_threshold output_data_stale_min_ms main_tick_slow_threshold_us led_health_init_ms led_health_debounce_ms ap_start_retry_backoff_ms");
   }
   if (showLog) {
     Serial.println("log/sd: daily_enabled all_enabled all_max_bytes flush_ms io_budget_ms mount_retry_ms write_retry_backoff_ms max_write_retries session_name events_max_bytes");
+  }
+  if (showLidar) {
+    Serial.println("lidar/tfluna: service_ms min_strength max_distance_cm frame_stale_ms serial_print_interval_ms");
   }
   if (showI2c) {
     Serial.println("i2c: freq_hz op_timeout_ms stuck_debounce_ms max_consecutive_failures recovery_backoff_ms recovery_backoff_max_ms requests_per_tick slow_op_threshold_us slow_op_degrade_count task_heartbeat_timeout_ms recover_timeout_ms max_results_per_tick task_wait_ms health_stale_task_multiplier slow_window_ms health_recent_window_ms");
@@ -3028,9 +3196,6 @@ void SerialCli::printSettableKeys(const char* group) {
   }
   if (showDisplay) {
     Serial.println("display: poll_ms address");
-  }
-  if (showCo2) {
-    Serial.println("co2/e2: address bit_timeout_us byte_timeout_us clock_low_us clock_high_us start_hold_us stop_hold_us write_delay_ms interval_write_delay_ms offline_threshold recovery_backoff_ms recovery_backoff_max_ms config_interval_ds config_co2_interval_factor config_filter config_operating_mode config_offset_ppm config_gain");
   }
   if (showWifi) {
     Serial.println("wifi: enabled ssid secret auto_off_ms");
@@ -3339,11 +3504,13 @@ void SerialCli::printDiagnostics(const char* scope) {
   }
 
   const bool showAll = strcmp(resolved, "all") == 0;
+  const bool showLidar = showAll || strcmp(resolved, "lidar") == 0 || strcmp(resolved, "tfluna") == 0 ||
+                         strcmp(resolved, "co2") == 0 || strcmp(resolved, "e2") == 0;
   const bool showI2c = showAll || strcmp(resolved, "i2c") == 0;
   const bool showRtc = showAll || strcmp(resolved, "rtc") == 0;
   const bool showEnv = showAll || strcmp(resolved, "env") == 0;
-  if (!showI2c && !showRtc && !showEnv) {
-    Serial.println("ERR usage: diag [all|i2c|rtc|env]");
+  if (!showLidar && !showI2c && !showRtc && !showEnv) {
+    Serial.println("ERR usage: diag [all|lidar|i2c|rtc|env]");
     printHint("help diag");
     return;
   }
@@ -3365,6 +3532,53 @@ void SerialCli::printDiagnostics(const char* scope) {
   (void)hasLatest;
   I2cScanSnapshot scan{};
   const bool haveScan = _app.tryGetI2cScanSnapshot(scan);
+
+  if (showLidar) {
+    const DeviceStatus* lidar = findDeviceInScratch("lidar", count);
+    if (lidar != nullptr) {
+      Serial.printf("diag lidar: health=%s code=%s detail=%ld msg='%s'\n",
+                    healthToStrColored(lidar->health),
+                    errToStrColored(lidar->lastStatus.code),
+                    static_cast<long>(lidar->lastStatus.detail),
+                    lidar->lastStatus.msg);
+    }
+    Serial.printf("diag lidar hw: rx=%d tx=%d uart=%u mapping='sensor TX -> ESP RX, sensor RX -> ESP TX'\n",
+                  hw.lidarRx,
+                  hw.lidarTx,
+                  static_cast<unsigned int>(hw.lidarUartIndex));
+    if (haveSettings) {
+      Serial.printf("diag lidar cfg: service_ms=%lu min_strength=%u max_distance_cm=%u stale_ms=%lu serial_ms=%lu\n",
+                    static_cast<unsigned long>(settings.lidarServiceMs),
+                    static_cast<unsigned int>(settings.lidarMinStrength),
+                    static_cast<unsigned int>(settings.lidarMaxDistanceCm),
+                    static_cast<unsigned long>(settings.lidarFrameStaleMs),
+                    static_cast<unsigned long>(settings.serialPrintIntervalMs));
+    }
+    if (haveSys) {
+      Serial.printf("diag lidar stream: frames=%lu checksum=%lu sync=%lu age_ms=%lu valid=%lu invalid=%lu weak=%lu\n",
+                    static_cast<unsigned long>(sys.lidarFramesParsed),
+                    static_cast<unsigned long>(sys.lidarChecksumErrors),
+                    static_cast<unsigned long>(sys.lidarSyncLossCount),
+                    static_cast<unsigned long>(sys.lidarFrameAgeMs),
+                    static_cast<unsigned long>(sys.lidarStats.validSamples),
+                    static_cast<unsigned long>(sys.lidarStats.invalidSamples),
+                    static_cast<unsigned long>(sys.lidarStats.weakSamples));
+      Serial.printf("diag lidar last: dist=%u strength=%u temp=%.2f frame=%u signal=%u time_src=%s\n",
+                    static_cast<unsigned int>(latest.distanceCm),
+                    static_cast<unsigned int>(latest.strength),
+                    static_cast<double>(latest.lidarTempC),
+                    latest.validFrame ? 1U : 0U,
+                    latest.signalOk ? 1U : 0U,
+                    sys.timeSource);
+    }
+    if (lidar != nullptr && lidar->health != HealthState::OK) {
+      Serial.println("diag lidar next:");
+      Serial.println("  lidar pins");
+      Serial.println("  lidar probe");
+      Serial.println("  lidar recover");
+      Serial.println("  settings show lidar");
+    }
+  }
 
   if (showI2c) {
     const DeviceStatus* i2c = findDeviceInScratch("i2c_bus", count);
@@ -3826,30 +4040,20 @@ void SerialCli::executeLine(char* line, uint32_t nowMs) {
     Serial.printf("  %s%-28s%s %u\n", CLI_ANSI_INFO, "Offline threshold", CLI_ANSI_RESET, static_cast<unsigned int>(s.i2cRtcOfflineThreshold));
   };
 
-  auto printCo2Summary = [&](const RuntimeSettings& s) {
-    Serial.printf("%s[CO2 Config]%s\n", CLI_ANSI_WARN, CLI_ANSI_RESET);
-    Serial.printf("  %s%-28s%s %u\n", CLI_ANSI_INFO, "Address", CLI_ANSI_RESET, static_cast<unsigned int>(s.e2Address));
-    Serial.printf("  %s%-28s%s %lu us\n", CLI_ANSI_INFO, "Bit timeout", CLI_ANSI_RESET, static_cast<unsigned long>(s.e2BitTimeoutUs));
-    Serial.printf("  %s%-28s%s %lu us\n", CLI_ANSI_INFO, "Byte timeout", CLI_ANSI_RESET, static_cast<unsigned long>(s.e2ByteTimeoutUs));
-    Serial.printf("  %s%-28s%s %u\n", CLI_ANSI_INFO, "Offline threshold", CLI_ANSI_RESET, static_cast<unsigned int>(s.e2OfflineThreshold));
-    Serial.printf("  %s%-28s%s %lu ms\n", CLI_ANSI_INFO, "Backoff", CLI_ANSI_RESET, static_cast<unsigned long>(s.e2RecoveryBackoffMs));
-    Serial.printf("  %s%-28s%s %lu ms\n", CLI_ANSI_INFO, "Backoff max", CLI_ANSI_RESET, static_cast<unsigned long>(s.e2RecoveryBackoffMaxMs));
+  auto printLidarSummary = [&](const RuntimeSettings& s) {
+    const HardwareSettings& hw = _app.getConfig();
+    Serial.printf("%s[TF-Luna Config]%s\n", CLI_ANSI_WARN, CLI_ANSI_RESET);
+    Serial.printf("  %s%-28s%s %lu ms\n", CLI_ANSI_INFO, "UART service", CLI_ANSI_RESET, static_cast<unsigned long>(s.lidarServiceMs));
+    Serial.printf("  %s%-28s%s %u\n", CLI_ANSI_INFO, "Min strength", CLI_ANSI_RESET, static_cast<unsigned int>(s.lidarMinStrength));
+    Serial.printf("  %s%-28s%s %u cm\n", CLI_ANSI_INFO, "Max distance", CLI_ANSI_RESET, static_cast<unsigned int>(s.lidarMaxDistanceCm));
+    Serial.printf("  %s%-28s%s %lu ms\n", CLI_ANSI_INFO, "Frame stale", CLI_ANSI_RESET, static_cast<unsigned long>(s.lidarFrameStaleMs));
+    Serial.printf("  %s%-28s%s %lu ms\n", CLI_ANSI_INFO, "Serial summary", CLI_ANSI_RESET, static_cast<unsigned long>(s.serialPrintIntervalMs));
     Serial.println();
-    Serial.printf("%s[CO2 Timing]%s\n", CLI_ANSI_WARN, CLI_ANSI_RESET);
-    Serial.printf("  %s%-28s%s %u us\n", CLI_ANSI_INFO, "Clock low", CLI_ANSI_RESET, static_cast<unsigned int>(s.e2ClockLowUs));
-    Serial.printf("  %s%-28s%s %u us\n", CLI_ANSI_INFO, "Clock high", CLI_ANSI_RESET, static_cast<unsigned int>(s.e2ClockHighUs));
-    Serial.printf("  %s%-28s%s %u us\n", CLI_ANSI_INFO, "Start hold", CLI_ANSI_RESET, static_cast<unsigned int>(s.e2StartHoldUs));
-    Serial.printf("  %s%-28s%s %u us\n", CLI_ANSI_INFO, "Stop hold", CLI_ANSI_RESET, static_cast<unsigned int>(s.e2StopHoldUs));
-    Serial.printf("  %s%-28s%s %lu ms\n", CLI_ANSI_INFO, "Write delay", CLI_ANSI_RESET, static_cast<unsigned long>(s.e2WriteDelayMs));
-    Serial.printf("  %s%-28s%s %lu ms\n", CLI_ANSI_INFO, "Interval write delay", CLI_ANSI_RESET, static_cast<unsigned long>(s.e2IntervalWriteDelayMs));
-    Serial.println();
-    Serial.printf("%s[CO2 Managed Settings]%s\n", CLI_ANSI_WARN, CLI_ANSI_RESET);
-    Serial.printf("  %s%-28s%s %u\n", CLI_ANSI_INFO, "Interval (ds)", CLI_ANSI_RESET, static_cast<unsigned int>(s.e2ConfigIntervalDs));
-    Serial.printf("  %s%-28s%s %d\n", CLI_ANSI_INFO, "Factor", CLI_ANSI_RESET, static_cast<int>(s.e2ConfigCo2IntervalFactor));
-    Serial.printf("  %s%-28s%s %u\n", CLI_ANSI_INFO, "Filter", CLI_ANSI_RESET, static_cast<unsigned int>(s.e2ConfigFilter));
-    Serial.printf("  %s%-28s%s %u\n", CLI_ANSI_INFO, "Operating mode", CLI_ANSI_RESET, static_cast<unsigned int>(s.e2ConfigOperatingMode));
-    Serial.printf("  %s%-28s%s %d\n", CLI_ANSI_INFO, "Offset (ppm)", CLI_ANSI_RESET, static_cast<int>(s.e2ConfigOffsetPpm));
-    Serial.printf("  %s%-28s%s %u\n", CLI_ANSI_INFO, "Gain", CLI_ANSI_RESET, static_cast<unsigned int>(s.e2ConfigGain));
+    Serial.printf("%s[TF-Luna Wiring]%s\n", CLI_ANSI_WARN, CLI_ANSI_RESET);
+    Serial.printf("  %s%-28s%s GPIO%d\n", CLI_ANSI_INFO, "ESP32 RX", CLI_ANSI_RESET, hw.lidarRx);
+    Serial.printf("  %s%-28s%s GPIO%d\n", CLI_ANSI_INFO, "ESP32 TX", CLI_ANSI_RESET, hw.lidarTx);
+    Serial.printf("  %s%-28s%s UART%u\n", CLI_ANSI_INFO, "UART index", CLI_ANSI_RESET, static_cast<unsigned int>(hw.lidarUartIndex));
+    Serial.printf("  %s%-28s%s sensor TX -> ESP RX, sensor RX -> ESP TX\n", CLI_ANSI_INFO, "Mapping", CLI_ANSI_RESET);
   };
 
   // Core discovery and monitoring commands.
@@ -3902,7 +4106,7 @@ void SerialCli::executeLine(char* line, uint32_t nowMs) {
       printDiagnostics(tokens[1]);
       return;
     }
-    printUsageWithHint("diag [all|i2c|rtc|env]", "diag");
+    printUsageWithHint("diag [all|lidar|i2c|rtc|env]", "diag");
     return;
   }
 
@@ -3930,7 +4134,7 @@ void SerialCli::executeLine(char* line, uint32_t nowMs) {
       printRead(tokens[1]);
       return;
     }
-    printUsageWithHint("read [all|co2|env|rtc]", "read");
+    printUsageWithHint("read [all|lidar|env|rtc]", "read");
     return;
   }
 
@@ -4041,8 +4245,7 @@ void SerialCli::executeLine(char* line, uint32_t nowMs) {
         }
         return;
       }
-      if (normalized != nullptr &&
-          (strcmp(normalized, "button") == 0 || strcmp(normalized, "rs485") == 0)) {
+      if (normalized != nullptr && strcmp(normalized, "button") == 0) {
         printBootConfig("hardware");
         return;
       }
@@ -4051,15 +4254,20 @@ void SerialCli::executeLine(char* line, uint32_t nowMs) {
     }
     if (argc == 3 && strcmp(tokens[2], "read") == 0) {
       const char* normalized = normalizeDeviceName(tokens[1]);
-      if (strcmp(normalized, "co2") == 0 || strcmp(normalized, "env") == 0 || strcmp(normalized, "rtc") == 0) {
+      if (strcmp(normalized, "lidar") == 0 || strcmp(normalized, "env") == 0 || strcmp(normalized, "rtc") == 0) {
         printRead(normalized);
         return;
       }
-      printUsageWithHint("device <env|rtc|co2|e2> read", "device");
+      printUsageWithHint("device <env|rtc|lidar|tfluna|co2|e2> read", "device");
       return;
     }
     if (argc == 3 && strcmp(tokens[2], "diag") == 0) {
       const char* normalized = normalizeDeviceName(tokens[1]);
+      if (strcmp(normalized, "lidar") == 0) {
+        printDevice("lidar");
+        printRead("lidar");
+        return;
+      }
       if (strcmp(normalized, "i2c_bus") == 0) {
         printDiagnostics("i2c");
         return;
@@ -4072,11 +4280,20 @@ void SerialCli::executeLine(char* line, uint32_t nowMs) {
         printDiagnostics("env");
         return;
       }
-      printUsageWithHint("device <i2c|rtc|env> diag", "device");
+      printUsageWithHint("device <lidar|i2c|rtc|env> diag", "device");
       return;
     }
     if (argc == 3 && strcmp(tokens[2], "probe") == 0) {
       const char* normalized = normalizeDeviceName(tokens[1]);
+      if (strcmp(normalized, "lidar") == 0) {
+        const Status st = _app.enqueueProbeLidarSensor();
+        if (!st.ok()) {
+          Serial.printf("ERR lidar probe queue failed: %s (%s)\n", errToStr(st.code), st.msg);
+          return;
+        }
+        printOkf("lidar probe queued");
+        return;
+      }
       if (strcmp(normalized, "i2c_bus") == 0) {
         const Status st = _app.enqueueScanI2cBus();
         if (!st.ok()) {
@@ -4103,7 +4320,16 @@ void SerialCli::executeLine(char* line, uint32_t nowMs) {
         queueI2cProbeAddress(settings.i2cDisplayAddress);
         return;
       }
-      printUsageWithHint("device <i2c|env|rtc|display> probe", "device");
+      printUsageWithHint("device <lidar|i2c|env|rtc|display> probe", "device");
+      return;
+    }
+    if (argc == 3 && deviceNameEquals(tokens[1], "lidar") && strcmp(tokens[2], "recover") == 0) {
+      const Status st = _app.enqueueRecoverLidarSensor();
+      if (!st.ok()) {
+        Serial.printf("ERR lidar recover queue failed: %s (%s)\n", errToStr(st.code), st.msg);
+        return;
+      }
+      printOkf("lidar recover queued");
       return;
     }
     if (argc == 3 && deviceNameEquals(tokens[1], "i2c_bus") && strcmp(tokens[2], "recover") == 0) {
@@ -4964,329 +5190,141 @@ void SerialCli::executeLine(char* line, uint32_t nowMs) {
     return;
   }
 
-  if (strcmp(tokens[0], "co2") == 0 || strcmp(tokens[0], "e2") == 0) {
+  if (strcmp(tokens[0], "lidar") == 0 || strcmp(tokens[0], "tfluna") == 0 ||
+      strcmp(tokens[0], "co2") == 0 || strcmp(tokens[0], "e2") == 0) {
     if (argc == 1) {
       RuntimeSettings settings{};
       if (!loadSettingsSnapshot(settings)) {
         return;
       }
-      printCo2Summary(settings);
+      printLidarSummary(settings);
       return;
     }
     if (argc == 2 && strcmp(tokens[1], "status") == 0) {
-      printDevice("co2");
+      printDevice("lidar");
       return;
     }
     if (argc == 2 && strcmp(tokens[1], "read") == 0) {
-      printRead("co2");
+      printRead("lidar");
       return;
     }
     if (argc == 2 && strcmp(tokens[1], "settings") == 0) {
-      printSettings("co2");
+      printSettings("lidar");
+      return;
+    }
+    if (argc == 2 && strcmp(tokens[1], "pins") == 0) {
+      const HardwareSettings& hw = _app.getConfig();
+      Serial.printf("  %s%-28s%s GPIO%d\n", CLI_ANSI_INFO, "ESP32 RX", CLI_ANSI_RESET, hw.lidarRx);
+      Serial.printf("  %s%-28s%s GPIO%d\n", CLI_ANSI_INFO, "ESP32 TX", CLI_ANSI_RESET, hw.lidarTx);
+      Serial.printf("  %s%-28s%s UART%u\n", CLI_ANSI_INFO, "UART index", CLI_ANSI_RESET, static_cast<unsigned int>(hw.lidarUartIndex));
+      Serial.printf("  %s%-28s%s sensor TX -> ESP RX, sensor RX -> ESP TX\n", CLI_ANSI_INFO, "Mapping", CLI_ANSI_RESET);
       return;
     }
     if (argc == 2 && strcmp(tokens[1], "recover") == 0) {
-      const Status st = _app.enqueueRecoverCo2Sensor();
+      const Status st = _app.enqueueRecoverLidarSensor();
       if (!st.ok()) {
-        Serial.printf("ERR co2 recover queue failed: %s (%s)\n", errToStr(st.code), st.msg);
+        Serial.printf("ERR lidar recover queue failed: %s (%s)\n", errToStr(st.code), st.msg);
         return;
       }
-      printOkf("co2 recover queued");
+      printOkf("lidar recover queued");
       return;
     }
-    if (argc == 2 && strcmp(tokens[1], "address") == 0) {
+    if (argc == 2 && strcmp(tokens[1], "probe") == 0) {
+      const Status st = _app.enqueueProbeLidarSensor();
+      if (!st.ok()) {
+        Serial.printf("ERR lidar probe queue failed: %s (%s)\n", errToStr(st.code), st.msg);
+        return;
+      }
+      printOkf("lidar probe queued");
+      printHint("this uses the GitHub TFMini-Plus library path once, for diagnostics");
+      return;
+    }
+    if (argc == 2 && strcmp(tokens[1], "service") == 0) {
       RuntimeSettings settings{};
       if (!loadSettingsSnapshot(settings)) {
         return;
       }
-      Serial.printf("  %s%-28s%s %u\n", CLI_ANSI_INFO, "Address", CLI_ANSI_RESET, static_cast<unsigned int>(settings.e2Address));
+      Serial.printf("  %s%-28s%s %lu ms\n", CLI_ANSI_INFO, "UART service", CLI_ANSI_RESET, static_cast<unsigned long>(settings.lidarServiceMs));
       return;
     }
-    if (argc == 2 && strcmp(tokens[1], "timeouts") == 0) {
+    if (argc == 2 && strcmp(tokens[1], "min_strength") == 0) {
       RuntimeSettings settings{};
       if (!loadSettingsSnapshot(settings)) {
         return;
       }
-      Serial.printf("  %s%-28s%s %lu us\n", CLI_ANSI_INFO, "Bit timeout", CLI_ANSI_RESET, static_cast<unsigned long>(settings.e2BitTimeoutUs));
-      Serial.printf("  %s%-28s%s %lu us\n", CLI_ANSI_INFO, "Byte timeout", CLI_ANSI_RESET, static_cast<unsigned long>(settings.e2ByteTimeoutUs));
+      Serial.printf("  %s%-28s%s %u\n", CLI_ANSI_INFO, "Minimum strength", CLI_ANSI_RESET, static_cast<unsigned int>(settings.lidarMinStrength));
       return;
     }
-    if (argc == 2 && strcmp(tokens[1], "timing") == 0) {
+    if (argc == 2 && strcmp(tokens[1], "max_distance") == 0) {
       RuntimeSettings settings{};
       if (!loadSettingsSnapshot(settings)) {
         return;
       }
-      Serial.printf("  %s%-28s%s %u us\n", CLI_ANSI_INFO, "Clock low", CLI_ANSI_RESET, static_cast<unsigned int>(settings.e2ClockLowUs));
-      Serial.printf("  %s%-28s%s %u us\n", CLI_ANSI_INFO, "Clock high", CLI_ANSI_RESET, static_cast<unsigned int>(settings.e2ClockHighUs));
-      Serial.printf("  %s%-28s%s %u us\n", CLI_ANSI_INFO, "Start hold", CLI_ANSI_RESET, static_cast<unsigned int>(settings.e2StartHoldUs));
-      Serial.printf("  %s%-28s%s %u us\n", CLI_ANSI_INFO, "Stop hold", CLI_ANSI_RESET, static_cast<unsigned int>(settings.e2StopHoldUs));
+      Serial.printf("  %s%-28s%s %u cm\n", CLI_ANSI_INFO, "Maximum distance", CLI_ANSI_RESET, static_cast<unsigned int>(settings.lidarMaxDistanceCm));
       return;
     }
-    if (argc == 2 && strcmp(tokens[1], "write_delay") == 0) {
+    if (argc == 2 && strcmp(tokens[1], "stale") == 0) {
       RuntimeSettings settings{};
       if (!loadSettingsSnapshot(settings)) {
         return;
       }
-      Serial.printf("  %s%-28s%s %lu ms\n", CLI_ANSI_INFO, "Write delay", CLI_ANSI_RESET, static_cast<unsigned long>(settings.e2WriteDelayMs));
-      Serial.printf("  %s%-28s%s %lu ms\n", CLI_ANSI_INFO, "Interval write delay", CLI_ANSI_RESET, static_cast<unsigned long>(settings.e2IntervalWriteDelayMs));
+      Serial.printf("  %s%-28s%s %lu ms\n", CLI_ANSI_INFO, "Frame stale", CLI_ANSI_RESET, static_cast<unsigned long>(settings.lidarFrameStaleMs));
       return;
     }
-    if (argc == 2 && strcmp(tokens[1], "offline") == 0) {
+    if (argc == 2 && strcmp(tokens[1], "serial") == 0) {
       RuntimeSettings settings{};
       if (!loadSettingsSnapshot(settings)) {
         return;
       }
-      Serial.printf("  %s%-28s%s %u\n", CLI_ANSI_INFO, "Offline threshold", CLI_ANSI_RESET, static_cast<unsigned int>(settings.e2OfflineThreshold));
+      Serial.printf("  %s%-28s%s %lu ms\n", CLI_ANSI_INFO, "Serial summary", CLI_ANSI_RESET, static_cast<unsigned long>(settings.serialPrintIntervalMs));
       return;
     }
-    if (argc == 2 && strcmp(tokens[1], "backoff") == 0) {
-      RuntimeSettings settings{};
-      if (!loadSettingsSnapshot(settings)) {
-        return;
-      }
-      Serial.printf("  %s%-28s%s %lu ms\n", CLI_ANSI_INFO, "Backoff", CLI_ANSI_RESET, static_cast<unsigned long>(settings.e2RecoveryBackoffMs));
-      Serial.printf("  %s%-28s%s %lu ms\n", CLI_ANSI_INFO, "Backoff max", CLI_ANSI_RESET, static_cast<unsigned long>(settings.e2RecoveryBackoffMaxMs));
-      return;
-    }
-    if (argc == 2 && strcmp(tokens[1], "cfg") == 0) {
-      RuntimeSettings settings{};
-      if (!loadSettingsSnapshot(settings)) {
-        return;
-      }
-      Serial.printf("  %s%-28s%s %u\n", CLI_ANSI_INFO, "Interval (ds)", CLI_ANSI_RESET, static_cast<unsigned int>(settings.e2ConfigIntervalDs));
-      Serial.printf("  %s%-28s%s %d\n", CLI_ANSI_INFO, "Factor", CLI_ANSI_RESET, static_cast<int>(settings.e2ConfigCo2IntervalFactor));
-      Serial.printf("  %s%-28s%s %u\n", CLI_ANSI_INFO, "Filter", CLI_ANSI_RESET, static_cast<unsigned int>(settings.e2ConfigFilter));
-      Serial.printf("  %s%-28s%s %u\n", CLI_ANSI_INFO, "Operating mode", CLI_ANSI_RESET, static_cast<unsigned int>(settings.e2ConfigOperatingMode));
-      Serial.printf("  %s%-28s%s %d\n", CLI_ANSI_INFO, "Offset (ppm)", CLI_ANSI_RESET, static_cast<int>(settings.e2ConfigOffsetPpm));
-      Serial.printf("  %s%-28s%s %u\n", CLI_ANSI_INFO, "Gain", CLI_ANSI_RESET, static_cast<unsigned int>(settings.e2ConfigGain));
-      return;
-    }
-    if ((argc == 3 || argc == 4) && strcmp(tokens[1], "address") == 0) {
+    if ((argc == 3 || argc == 4) && strcmp(tokens[1], "service") == 0) {
       bool persist = false;
       if (argc == 4 && !parseBoolToken(tokens[3], persist)) {
         Serial.println("ERR persist must be bool");
         return;
       }
-      (void)queueGroupedSetting("co2", "address", tokens[2], persist);
+      (void)queueGroupedSetting("lidar", "service_ms", tokens[2], persist);
       return;
     }
-    if ((argc == 4 || argc == 5) && strcmp(tokens[1], "timeouts") == 0) {
-      bool persist = false;
-      if (argc == 5 && !parseBoolToken(tokens[4], persist)) {
-        Serial.println("ERR persist must be bool");
-        return;
-      }
-      RuntimeSettings settings{};
-      if (!_app.tryGetSettingsSnapshot(settings)) {
-        Serial.println("ERR state busy");
-        return;
-      }
-      const char* errorMsg = "";
-      if (!applySettingByKey(settings, "e2_bit_timeout_us", tokens[2], errorMsg) ||
-          !applySettingByKey(settings, "e2_byte_timeout_us", tokens[3], errorMsg)) {
-        Serial.printf("ERR set failed: %s\n", errorMsg);
-        return;
-      }
-      const Status validation = settings.validate();
-      if (!validation.ok()) {
-        Serial.printf("ERR settings invalid: %s (%s)\n", errToStr(validation.code), validation.msg);
-        return;
-      }
-      queueSettingsUpdate(settings, persist);
-      return;
-    }
-    if ((argc == 6 || argc == 7) && strcmp(tokens[1], "timing") == 0) {
-      bool persist = false;
-      if (argc == 7 && !parseBoolToken(tokens[6], persist)) {
-        Serial.println("ERR persist must be bool");
-        return;
-      }
-      RuntimeSettings settings{};
-      if (!_app.tryGetSettingsSnapshot(settings)) {
-        Serial.println("ERR state busy");
-        return;
-      }
-      const char* errorMsg = "";
-      if (!applySettingByKey(settings, "e2_clock_low_us", tokens[2], errorMsg) ||
-          !applySettingByKey(settings, "e2_clock_high_us", tokens[3], errorMsg) ||
-          !applySettingByKey(settings, "e2_start_hold_us", tokens[4], errorMsg) ||
-          !applySettingByKey(settings, "e2_stop_hold_us", tokens[5], errorMsg)) {
-        Serial.printf("ERR set failed: %s\n", errorMsg);
-        return;
-      }
-      const Status validation = settings.validate();
-      if (!validation.ok()) {
-        Serial.printf("ERR settings invalid: %s (%s)\n", errToStr(validation.code), validation.msg);
-        return;
-      }
-      queueSettingsUpdate(settings, persist);
-      return;
-    }
-    if ((argc == 4 || argc == 5) && strcmp(tokens[1], "write_delay") == 0) {
-      bool persist = false;
-      if (argc == 5 && !parseBoolToken(tokens[4], persist)) {
-        Serial.println("ERR persist must be bool");
-        return;
-      }
-      RuntimeSettings settings{};
-      if (!_app.tryGetSettingsSnapshot(settings)) {
-        Serial.println("ERR state busy");
-        return;
-      }
-      const char* errorMsg = "";
-      if (!applySettingByKey(settings, "e2_write_delay_ms", tokens[2], errorMsg) ||
-          !applySettingByKey(settings, "e2_interval_write_delay_ms", tokens[3], errorMsg)) {
-        Serial.printf("ERR set failed: %s\n", errorMsg);
-        return;
-      }
-      const Status validation = settings.validate();
-      if (!validation.ok()) {
-        Serial.printf("ERR settings invalid: %s (%s)\n", errToStr(validation.code), validation.msg);
-        return;
-      }
-      queueSettingsUpdate(settings, persist);
-      return;
-    }
-    if ((argc == 3 || argc == 4) && strcmp(tokens[1], "offline") == 0) {
+    if ((argc == 3 || argc == 4) && strcmp(tokens[1], "min_strength") == 0) {
       bool persist = false;
       if (argc == 4 && !parseBoolToken(tokens[3], persist)) {
         Serial.println("ERR persist must be bool");
         return;
       }
-      (void)queueGroupedSetting("co2", "offline_threshold", tokens[2], persist);
+      (void)queueGroupedSetting("lidar", "min_strength", tokens[2], persist);
       return;
     }
-    if ((argc == 4 || argc == 5) && strcmp(tokens[1], "backoff") == 0) {
+    if ((argc == 3 || argc == 4) && strcmp(tokens[1], "max_distance") == 0) {
       bool persist = false;
-      if (argc == 5 && !parseBoolToken(tokens[4], persist)) {
+      if (argc == 4 && !parseBoolToken(tokens[3], persist)) {
         Serial.println("ERR persist must be bool");
         return;
       }
-      RuntimeSettings settings{};
-      if (!_app.tryGetSettingsSnapshot(settings)) {
-        Serial.println("ERR state busy");
-        return;
-      }
-      const char* errorMsg = "";
-      if (!applySettingByKey(settings, "e2_recovery_backoff_ms", tokens[2], errorMsg) ||
-          !applySettingByKey(settings, "e2_recovery_backoff_max_ms", tokens[3], errorMsg)) {
-        Serial.printf("ERR set failed: %s\n", errorMsg);
-        return;
-      }
-      const Status validation = settings.validate();
-      if (!validation.ok()) {
-        Serial.printf("ERR settings invalid: %s (%s)\n", errToStr(validation.code), validation.msg);
-        return;
-      }
-      queueSettingsUpdate(settings, persist);
+      (void)queueGroupedSetting("lidar", "max_distance_cm", tokens[2], persist);
       return;
     }
-    if ((argc == 3 || argc == 4 || argc == 5) && strcmp(tokens[1], "cfg") == 0) {
-      if (argc == 3) {
-        RuntimeSettings settings{};
-        if (!loadSettingsSnapshot(settings)) {
-          return;
-        }
-        const char* key = tokens[2];
-        if (strcmp(key, "interval") == 0) {
-          Serial.printf("  %s%-28s%s %u\n", CLI_ANSI_INFO, "Interval (ds)", CLI_ANSI_RESET, static_cast<unsigned int>(settings.e2ConfigIntervalDs));
-          return;
-        }
-        if (strcmp(key, "factor") == 0) {
-          Serial.printf("  %s%-28s%s %d\n", CLI_ANSI_INFO, "Factor", CLI_ANSI_RESET, static_cast<int>(settings.e2ConfigCo2IntervalFactor));
-          return;
-        }
-        if (strcmp(key, "filter") == 0) {
-          Serial.printf("  %s%-28s%s %u\n", CLI_ANSI_INFO, "Filter", CLI_ANSI_RESET, static_cast<unsigned int>(settings.e2ConfigFilter));
-          return;
-        }
-        if (strcmp(key, "mode") == 0) {
-          Serial.printf("  %s%-28s%s %u\n", CLI_ANSI_INFO, "Operating mode", CLI_ANSI_RESET, static_cast<unsigned int>(settings.e2ConfigOperatingMode));
-          return;
-        }
-        if (strcmp(key, "offset") == 0 || strcmp(key, "offset_ppm") == 0) {
-          Serial.printf("  %s%-28s%s %d\n", CLI_ANSI_INFO, "Offset (ppm)", CLI_ANSI_RESET, static_cast<int>(settings.e2ConfigOffsetPpm));
-          return;
-        }
-        if (strcmp(key, "gain") == 0) {
-          Serial.printf("  %s%-28s%s %u\n", CLI_ANSI_INFO, "Gain", CLI_ANSI_RESET, static_cast<unsigned int>(settings.e2ConfigGain));
-          return;
-        }
-        Serial.println("ERR cfg key must be interval|factor|filter|mode|offset|gain");
-        return;
-      }
+    if ((argc == 3 || argc == 4) && strcmp(tokens[1], "stale") == 0) {
       bool persist = false;
-      if (argc == 5 && !parseBoolToken(tokens[4], persist)) {
+      if (argc == 4 && !parseBoolToken(tokens[3], persist)) {
         Serial.println("ERR persist must be bool");
         return;
       }
-
-      RuntimeSettings settings{};
-      if (!_app.tryGetSettingsSnapshot(settings)) {
-        Serial.println("ERR state busy");
-        return;
-      }
-
-      const bool disable = strcmp(tokens[3], "off") == 0 || strcmp(tokens[3], "disable") == 0;
-      const char* key = tokens[2];
-      const char* errorMsg = "";
-
-      if (strcmp(key, "interval") == 0) {
-        if (disable) {
-          settings.e2ConfigIntervalDs = 0U;
-        } else if (!applySettingByKey(settings, "e2_config_interval_ds", tokens[3], errorMsg)) {
-          Serial.printf("ERR set failed: %s\n", errorMsg);
-          return;
-        }
-      } else if (strcmp(key, "factor") == 0) {
-        if (disable) {
-          settings.e2ConfigCo2IntervalFactor = RuntimeSettings::E2_CONFIG_INTERVAL_FACTOR_DISABLED;
-        } else if (!applySettingByKey(settings, "e2_config_co2_interval_factor", tokens[3], errorMsg)) {
-          Serial.printf("ERR set failed: %s\n", errorMsg);
-          return;
-        }
-      } else if (strcmp(key, "filter") == 0) {
-        if (disable) {
-          settings.e2ConfigFilter = RuntimeSettings::E2_CONFIG_FILTER_DISABLED;
-        } else if (!applySettingByKey(settings, "e2_config_filter", tokens[3], errorMsg)) {
-          Serial.printf("ERR set failed: %s\n", errorMsg);
-          return;
-        }
-      } else if (strcmp(key, "mode") == 0) {
-        if (disable) {
-          settings.e2ConfigOperatingMode = RuntimeSettings::E2_CONFIG_OPERATING_MODE_DISABLED;
-        } else if (!applySettingByKey(settings, "e2_config_operating_mode", tokens[3], errorMsg)) {
-          Serial.printf("ERR set failed: %s\n", errorMsg);
-          return;
-        }
-      } else if (strcmp(key, "offset") == 0 || strcmp(key, "offset_ppm") == 0) {
-        if (disable) {
-          settings.e2ConfigOffsetPpm = RuntimeSettings::E2_CONFIG_OFFSET_PPM_DISABLED;
-        } else if (!applySettingByKey(settings, "e2_config_offset_ppm", tokens[3], errorMsg)) {
-          Serial.printf("ERR set failed: %s\n", errorMsg);
-          return;
-        }
-      } else if (strcmp(key, "gain") == 0) {
-        if (disable) {
-          settings.e2ConfigGain = RuntimeSettings::E2_CONFIG_GAIN_DISABLED;
-        } else if (!applySettingByKey(settings, "e2_config_gain", tokens[3], errorMsg)) {
-          Serial.printf("ERR set failed: %s\n", errorMsg);
-          return;
-        }
-      } else {
-        Serial.println("ERR cfg key must be interval|factor|filter|mode|offset|gain");
-        return;
-      }
-
-      const Status validation = settings.validate();
-      if (!validation.ok()) {
-        Serial.printf("ERR settings invalid: %s (%s)\n", errToStr(validation.code), validation.msg);
-        return;
-      }
-      queueSettingsUpdate(settings, persist);
+      (void)queueGroupedSetting("lidar", "frame_stale_ms", tokens[2], persist);
       return;
     }
-    printUsageWithHint("co2 <status|read|settings|recover|address|timeouts|timing|write_delay|offline|backoff|cfg>", "co2");
+    if ((argc == 3 || argc == 4) && strcmp(tokens[1], "serial") == 0) {
+      bool persist = false;
+      if (argc == 4 && !parseBoolToken(tokens[3], persist)) {
+        Serial.println("ERR persist must be bool");
+        return;
+      }
+      (void)queueGroupedSetting("lidar", "serial_print_interval_ms", tokens[2], persist);
+      return;
+    }
+    printUsageWithHint("lidar <status|read|settings|pins|recover|probe|service|min_strength|max_distance|stale|serial>", "lidar");
     return;
   }
 
@@ -6422,7 +6460,17 @@ void SerialCli::executeLine(char* line, uint32_t nowMs) {
       if (!loadSettingsSnapshot(settings)) {
         return;
       }
-      Serial.printf("system sample_interval=%lu s\n", static_cast<unsigned long>(settings.sampleIntervalSec));
+      Serial.printf("system sample_interval=%lu ms\n", static_cast<unsigned long>(settings.sampleIntervalMs));
+      return;
+    }
+    if (argc == 2 && strcmp(tokens[1], "verbosity") == 0) {
+      RuntimeSettings settings{};
+      if (!loadSettingsSnapshot(settings)) {
+        return;
+      }
+      Serial.printf("system verbosity=%s (%u)\n",
+                    cliVerbosityToStr(settings.cliVerbosity),
+                    static_cast<unsigned int>(settings.cliVerbosity));
       return;
     }
     if (argc == 2 && strcmp(tokens[1], "command_drain") == 0) {
@@ -6476,9 +6524,9 @@ void SerialCli::executeLine(char* line, uint32_t nowMs) {
         Serial.println("ERR state busy");
         return;
       }
-      settings.sampleIntervalSec = 0;
-      if (!parseU32Token(tokens[2], settings.sampleIntervalSec)) {
-        Serial.println("ERR sample interval must be u32 sec");
+      settings.sampleIntervalMs = 0;
+      if (!parseU32Token(tokens[2], settings.sampleIntervalMs)) {
+        Serial.println("ERR sample interval must be u32 ms");
         return;
       }
       const Status validation = settings.validate();
@@ -6487,6 +6535,15 @@ void SerialCli::executeLine(char* line, uint32_t nowMs) {
         return;
       }
       queueSettingsUpdate(settings, persist);
+      return;
+    }
+    if ((argc == 3 || argc == 4) && strcmp(tokens[1], "verbosity") == 0) {
+      bool persist = false;
+      if (argc == 4 && !parseBoolToken(tokens[3], persist)) {
+        Serial.println("ERR persist must be bool");
+        return;
+      }
+      (void)queueGroupedSetting("system", "verbosity", tokens[2], persist);
       return;
     }
     if ((argc == 3 || argc == 4) && strcmp(tokens[1], "command_drain") == 0) {
@@ -6534,7 +6591,7 @@ void SerialCli::executeLine(char* line, uint32_t nowMs) {
       (void)queueGroupedSetting("system", "ap_start_retry_backoff_ms", tokens[2], persist);
       return;
     }
-    printUsageWithHint("system <status|settings|sample_interval|command_drain|command_window|command_depth|tick_slow|ap_retry>", "system");
+    printUsageWithHint("system <status|settings|sample_interval|verbosity|command_drain|command_window|command_depth|tick_slow|ap_retry>", "system");
     return;
   }
 
@@ -6598,19 +6655,6 @@ void SerialCli::executeLine(char* line, uint32_t nowMs) {
     return;
   }
 
-  if (strcmp(tokens[0], "rs485") == 0) {
-    if (argc == 2 && strcmp(tokens[1], "status") == 0) {
-      printDevice("rs485");
-      return;
-    }
-    if (argc == 2 && strcmp(tokens[1], "settings") == 0) {
-      printBootConfig("hardware");
-      return;
-    }
-    printUsageWithHint("rs485 <status|settings>", "rs485");
-    return;
-  }
-
   Serial.printf("%sERR%s unknown command\n", CLI_ANSI_ERR, CLI_ANSI_RESET);
   Serial.printf("%sHint:%s help topics\n", CLI_ANSI_INFO, CLI_ANSI_RESET);
 }
@@ -6621,4 +6665,4 @@ void SerialCli::end() {
 
 #endif
 
-}  // namespace CO2Control
+}  // namespace TFLunaControl

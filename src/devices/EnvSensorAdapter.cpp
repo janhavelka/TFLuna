@@ -2,7 +2,7 @@
 
 #include "i2c/I2cOrchestrator.h"
 
-namespace CO2Control {
+namespace TFLunaControl {
 
 Status EnvSensorAdapter::begin(const HardwareSettings& config, I2cOrchestrator* orchestrator) {
   _orchestrator = orchestrator;
@@ -34,4 +34,4 @@ Status EnvSensorAdapter::readOnce(Sample& sample, uint32_t nowMs) {
   return _lastStatus;
 }
 
-}  // namespace CO2Control
+}  // namespace TFLunaControl

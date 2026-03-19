@@ -4,7 +4,7 @@
 #include <Arduino.h>
 #endif
 
-namespace CO2Control {
+namespace TFLunaControl {
 
 Status ButtonManager::begin(const HardwareSettings& config) {
   _pin = config.buttonPin;
@@ -117,4 +117,4 @@ bool ButtonManager::consumeMultiPress() {
   return false;
 }
 
-}  // namespace CO2Control
+}  // namespace TFLunaControl

@@ -1,6 +1,6 @@
 /**
  * @file main.cpp
- * @brief CO2Control firmware entrypoint.
+ * @brief TFLunaControl firmware entrypoint.
  */
 
 #include <Arduino.h>
@@ -11,23 +11,24 @@
 #include <esp_task_wdt.h>
 #endif
 
-#include "CO2Control/CO2Control.h"
+#include "TFLunaControl/TFLunaControl.h"
 #include "config/AppConfig.h"
 #include "core/SerialCli.h"
 #include "core/SystemClock.h"
 
-static CO2Control::CO2Control g_app;
-static CO2Control::SerialCli g_cli(g_app);
+static TFLunaControl::TFLunaControl g_app;
+static TFLunaControl::SerialCli g_cli(g_app);
 static bool g_serialCliEnabled = false;
+static uint32_t g_nextSerialSummaryMs = 0;
 
 namespace {
 
-#ifndef CO2CONTROL_QUICK_TEST_PROFILE
-#define CO2CONTROL_QUICK_TEST_PROFILE 1
+#ifndef TFLUNACTRL_QUICK_TEST_PROFILE
+#define TFLUNACTRL_QUICK_TEST_PROFILE 1
 #endif
 
-#ifndef CO2CONTROL_STRESS_MODE
-#define CO2CONTROL_STRESS_MODE 0
+#ifndef TFLUNACTRL_STRESS_MODE
+#define TFLUNACTRL_STRESS_MODE 0
 #endif
 
 void driveOutputPinLow(int pin) {
@@ -38,7 +39,7 @@ void driveOutputPinLow(int pin) {
   digitalWrite(static_cast<uint8_t>(pin), LOW);
 }
 
-void primeOutputsLow(const CO2Control::HardwareSettings& hw) {
+void primeOutputsLow(const TFLunaControl::HardwareSettings& hw) {
   // Ensure all configured output channels are electrically LOW as early as possible.
   driveOutputPinLow(hw.mosfet1Pin);
   driveOutputPinLow(hw.mosfet2Pin);
@@ -46,29 +47,28 @@ void primeOutputsLow(const CO2Control::HardwareSettings& hw) {
   driveOutputPinLow(hw.relay2Pin);
 }
 
-void applyQuickProfileHardware(CO2Control::HardwareSettings& hw,
-                               const CO2Control::StartupProfileSettings& profile) {
+void applyQuickProfileHardware(TFLunaControl::HardwareSettings& hw,
+                               const TFLunaControl::StartupProfileSettings& profile) {
   hw.i2cSda = profile.quickProfileI2cSdaPin;
   hw.i2cScl = profile.quickProfileI2cSclPin;
-  hw.e2Tx = profile.quickProfileE2TxPin;
-  hw.e2Rx = profile.quickProfileE2RxPin;
-  hw.e2En = profile.quickProfileE2EnPin;
+  hw.lidarRx = profile.quickProfileLidarRxPin;
+  hw.lidarTx = profile.quickProfileLidarTxPin;
   if (profile.quickProfileMosfet1Pin >= 0) {
     hw.mosfet1Pin = profile.quickProfileMosfet1Pin;
   }
 }
 
-CO2Control::Status applyQuickProfileSettings(CO2Control::CO2Control& app,
-                                             const CO2Control::StartupProfileSettings& profile) {
-  CO2Control::RuntimeSettings settings = app.getSettings();
-  settings.sampleIntervalSec = profile.quickProfileSampleIntervalSec;
+TFLunaControl::Status applyQuickProfileSettings(TFLunaControl::TFLunaControl& app,
+                                             const TFLunaControl::StartupProfileSettings& profile) {
+  TFLunaControl::RuntimeSettings settings = app.getSettings();
+  settings.sampleIntervalMs = profile.quickProfileSampleIntervalMs;
   settings.wifiEnabled = true;
   settings.i2cEnvAddress = profile.quickProfileEnvAddress;
   return app.updateSettings(settings, false);
 }
 
-void tickStressMode(CO2Control::CO2Control& app,
-                    const CO2Control::StartupProfileSettings& profile,
+void tickStressMode(TFLunaControl::TFLunaControl& app,
+                    const TFLunaControl::StartupProfileSettings& profile,
                     uint32_t nowMs) {
   static uint32_t nextRtcMs = 0;
   static uint32_t nextSettingsMs = 0;
@@ -81,7 +81,7 @@ void tickStressMode(CO2Control::CO2Control& app,
 
   if (static_cast<int32_t>(nowMs - nextRtcMs) >= 0) {
     nextRtcMs = nowMs + profile.stressRtcIntervalMs;
-    CO2Control::RtcTime t{};
+    TFLunaControl::RtcTime t{};
     t.year = profile.stressRtcBaseYear;
     t.month = profile.stressRtcBaseMonth;
     t.day = profile.stressRtcBaseDay;
@@ -94,10 +94,10 @@ void tickStressMode(CO2Control::CO2Control& app,
 
   if (static_cast<int32_t>(nowMs - nextSettingsMs) >= 0) {
     nextSettingsMs = nowMs + profile.stressSettingsIntervalMs;
-    CO2Control::RuntimeSettings s = app.getSettings();
+    TFLunaControl::RuntimeSettings s = app.getSettings();
     flip = !flip;
     s.outputsEnabled = flip;
-    s.sampleIntervalSec = flip ? profile.stressSampleIntervalA : profile.stressSampleIntervalB;
+    s.sampleIntervalMs = flip ? profile.stressSampleIntervalMsA : profile.stressSampleIntervalMsB;
     (void)app.enqueueApplySettings(s, false);
   }
 
@@ -107,18 +107,70 @@ void tickStressMode(CO2Control::CO2Control& app,
   }
 }
 
-CO2Control::HardwareSettings g_hw{};
-CO2Control::AppSettings g_appSettings{};
-CO2Control::StartupProfileSettings g_startupProfile{};
+TFLunaControl::HardwareSettings g_hw{};
+TFLunaControl::AppSettings g_appSettings{};
+TFLunaControl::StartupProfileSettings g_startupProfile{};
+
+void printSerialSummary(uint32_t nowMs) {
+  TFLunaControl::RuntimeSettings settings{};
+  if (!g_app.tryGetSettingsSnapshot(settings)) {
+    return;
+  }
+
+  const uint32_t intervalMs =
+      (settings.serialPrintIntervalMs == 0U) ? 5000U : settings.serialPrintIntervalMs;
+  if (g_nextSerialSummaryMs != 0U &&
+      static_cast<int32_t>(nowMs - g_nextSerialSummaryMs) < 0) {
+    return;
+  }
+  g_nextSerialSummaryMs = nowMs + intervalMs;
+
+  TFLunaControl::SystemStatus sys{};
+  TFLunaControl::Sample latest{};
+  bool hasLatest = false;
+  if (!g_app.tryGetStatusSnapshot(sys, latest, hasLatest)) {
+    Serial.println("[diag] state busy");
+    return;
+  }
+
+  const char* timestamp =
+      (hasLatest && latest.tsLocal[0] != '\0') ? latest.tsLocal : "uptime";
+  if (hasLatest) {
+    Serial.printf("[lidar] src=%s ts=%s sample=%lu dist=%ucm strength=%u temp=%.1fC frame=%u signal=%u age=%lums frames=%lu checksum=%lu sync=%lu log=%u file=%s\n",
+                  sys.timeSource,
+                  timestamp,
+                  static_cast<unsigned long>(latest.sampleIndex),
+                  static_cast<unsigned int>(latest.distanceCm),
+                  static_cast<unsigned int>(latest.strength),
+                  static_cast<double>(latest.lidarTempC),
+                  latest.validFrame ? 1U : 0U,
+                  latest.signalOk ? 1U : 0U,
+                  static_cast<unsigned long>(sys.lidarFrameAgeMs),
+                  static_cast<unsigned long>(sys.lidarFramesParsed),
+                  static_cast<unsigned long>(sys.lidarChecksumErrors),
+                  static_cast<unsigned long>(sys.lidarSyncLossCount),
+                  (sys.sdMounted && (sys.logAllOk || sys.logDailyOk)) ? 1U : 0U,
+                  sys.logCurrentSampleFile);
+    return;
+  }
+
+  Serial.printf("[lidar] src=%s no-sample frames=%lu checksum=%lu sync=%lu age=%lums log=%u\n",
+                sys.timeSource,
+                static_cast<unsigned long>(sys.lidarFramesParsed),
+                static_cast<unsigned long>(sys.lidarChecksumErrors),
+                static_cast<unsigned long>(sys.lidarSyncLossCount),
+                static_cast<unsigned long>(sys.lidarFrameAgeMs),
+                (sys.sdMounted && (sys.logAllOk || sys.logDailyOk)) ? 1U : 0U);
+}
 
 }  // namespace
 
 void setup() {
-  g_hw = CO2Control::loadHardwareSettings();
-  g_appSettings = CO2Control::loadAppSettings(g_hw);
-  g_startupProfile = CO2Control::loadStartupProfileSettings();
-  g_startupProfile.quickProfileEnabled = (CO2CONTROL_QUICK_TEST_PROFILE != 0);
-  g_startupProfile.stressModeEnabled = (CO2CONTROL_STRESS_MODE != 0);
+  g_hw = TFLunaControl::loadHardwareSettings();
+  g_appSettings = TFLunaControl::loadAppSettings(g_hw);
+  g_startupProfile = TFLunaControl::loadStartupProfileSettings();
+  g_startupProfile.quickProfileEnabled = (TFLUNACTRL_QUICK_TEST_PROFILE != 0);
+  g_startupProfile.stressModeEnabled = (TFLUNACTRL_STRESS_MODE != 0);
 
   if (g_startupProfile.quickProfileEnabled) {
     applyQuickProfileHardware(g_hw, g_startupProfile);
@@ -129,7 +181,7 @@ void setup() {
   // IDF 5.x task WDT safety net.  pioarduino initialises the TWDT at boot
   // (CONFIG_ESP_TASK_WDT_INIT=y, CONFIG_ESP_TASK_WDT_PANIC=y) with zero
   // subscribers.  AsyncSD's enableCore0WDT() subscribes the IDLE task during
-  // periodic SD-info free-cluster scans — but IDLE has no hook to feed the
+  // periodic SD-info free-cluster scans â€” but IDLE has no hook to feed the
   // WDT, which would trigger a panic after the 5 s default timeout.
   // Reconfigure to non-panic mode with a generous timeout so accidental
   // IDLE subscriptions never crash the board.
@@ -147,12 +199,16 @@ void setup() {
   g_serialCliEnabled = (g_appSettings.serialEnabled && g_appSettings.serialBaudRate > 0U);
   if (g_serialCliEnabled) {
     Serial.begin(g_appSettings.serialBaudRate);
+    Serial.printf("[boot] TF-Luna UART mapping: sensor TX -> ESP32 RX GPIO%d, sensor RX -> ESP32 TX GPIO%d, UART%u @ 115200\n",
+                  g_hw.lidarRx,
+                  g_hw.lidarTx,
+                  static_cast<unsigned int>(g_hw.lidarUartIndex));
   }
 
-  const CO2Control::Status status = g_app.begin(g_hw, g_appSettings);
+  const TFLunaControl::Status status = g_app.begin(g_hw, g_appSettings);
   if (!status.ok()) {
     if (g_serialCliEnabled) {
-      Serial.printf("[E] CO2Control begin failed: %u (%s)\n",
+      Serial.printf("[E] TFLunaControl begin failed: %u (%s)\n",
                     static_cast<unsigned int>(status.code),
                     status.msg);
     }
@@ -160,7 +216,7 @@ void setup() {
   }
 
   if (g_startupProfile.quickProfileEnabled) {
-    const CO2Control::Status settingsStatus = applyQuickProfileSettings(g_app, g_startupProfile);
+    const TFLunaControl::Status settingsStatus = applyQuickProfileSettings(g_app, g_startupProfile);
     if (!settingsStatus.ok() && g_serialCliEnabled) {
       Serial.printf("[E] Quick profile settings failed: %u (%s)\n",
                     static_cast<unsigned int>(settingsStatus.code),
@@ -174,12 +230,13 @@ void setup() {
 }
 
 void loop() {
-  const uint32_t nowMs = CO2Control::SystemClock::nowMs();
+  const uint32_t nowMs = TFLunaControl::SystemClock::nowMs();
   g_app.tick(nowMs);
   g_app.processDeferred();
   tickStressMode(g_app, g_startupProfile, nowMs);
   if (g_serialCliEnabled) {
     g_cli.tick(nowMs);
+    printSerialSummary(nowMs);
   }
   // Yield each iteration so IDLE tasks can run on dual-core targets.
   delay(1);

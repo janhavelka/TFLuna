@@ -3,7 +3,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-namespace CO2Control {
+namespace TFLunaControl {
 
 /**
  * @brief Fixed-size FIFO command queue with overflow accounting.
@@ -59,4 +59,4 @@ class CommandQueue {
   uint32_t _lastOverflowMs = 0;
 };
 
-}  // namespace CO2Control
+}  // namespace TFLunaControl

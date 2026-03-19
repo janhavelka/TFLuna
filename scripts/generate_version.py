@@ -41,7 +41,7 @@ def _find_project_root():
     """Resolve project root in both standalone and PlatformIO/SCons contexts."""
     try:
         # PlatformIO injects Import(); use env["PROJECT_DIR"] when available.
-        Import("env")  # noqa: F821 – SCons built-in
+        Import("env")  # noqa: F821 â€“ SCons built-in
         return Path(env["PROJECT_DIR"])  # noqa: F821
     except Exception:
         pass
@@ -54,7 +54,7 @@ def main():
     project_root = _find_project_root()
     
     library_json = project_root / "library.json"
-    version_h = project_root / "include" / "CO2Control" / "Version.h"
+    version_h = project_root / "include" / "TFLunaControl" / "Version.h"
     
     # Read version from library.json
     with open(library_json, "r", encoding="utf-8") as f:
@@ -91,7 +91,7 @@ def main():
 
 #include <stdint.h>
 
-namespace CO2Control {{
+namespace TFLunaControl {{
 
 /// @brief Major version (breaking changes).
 static constexpr uint16_t VERSION_MAJOR = {major};
@@ -130,7 +130,7 @@ static constexpr const char* GIT_STATUS = "{git_status}";
 /// @note Format: "version (commit, date time)"
 static constexpr const char* VERSION_FULL = "{version} ({git_commit}, {build_timestamp})";
 
-}}  // namespace CO2Control
+}}  // namespace TFLunaControl
 '''
     
     # Write Version.h
@@ -141,6 +141,6 @@ static constexpr const char* VERSION_FULL = "{version} ({git_commit}, {build_tim
     print(f"Generated {version_h} with version {version}")
 
 
-# Always generate Version.h when this script is executed – works both as
+# Always generate Version.h when this script is executed â€“ works both as
 # a PlatformIO pre-build extra_script and when invoked standalone.
 main()

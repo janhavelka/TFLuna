@@ -2,10 +2,10 @@
 
 #include <stdint.h>
 
-#include "CO2Control/Status.h"
-#include "CO2Control/Types.h"
+#include "TFLunaControl/Status.h"
+#include "TFLunaControl/Types.h"
 
-namespace CO2Control {
+namespace TFLunaControl {
 
 struct EnvDecodedSample {
   float tempC = 0.0f;
@@ -21,4 +21,4 @@ Status parseEnvSamplePayload(uint8_t address,
                              uint8_t dataLen,
                              EnvDecodedSample& out);
 
-}  // namespace CO2Control
+}  // namespace TFLunaControl

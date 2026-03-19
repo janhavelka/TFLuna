@@ -1,6 +1,6 @@
 /**
  * @file Health.h
- * @brief Health model for CO2Control devices.
+ * @brief Health model for TFLunaControl devices.
  */
 
 #pragma once
@@ -8,10 +8,10 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "CO2Control/Status.h"
-#include "CO2Control/Types.h"
+#include "TFLunaControl/Status.h"
+#include "TFLunaControl/Types.h"
 
-namespace CO2Control {
+namespace TFLunaControl {
 
 /// @brief Device health state.
 enum class HealthState : uint8_t {
@@ -38,7 +38,7 @@ struct DeviceStatus {
   uint32_t lastErrorMs = 0;        ///< Timestamp of last error (ms)
   uint32_t lastActivityMs = 0;     ///< Timestamp of last activity (ms)
   uint32_t errorCount = 0;         ///< Total error count
-  bool optional = false;           ///< Optional device — excluded from system health aggregation
+  bool optional = false;           ///< Optional device â€” excluded from system health aggregation
 };
 
 /**
@@ -81,6 +81,15 @@ struct SystemStatus {
   uint8_t webOverrunBurst = 0;                ///< Current web overrun burst counter
   uint32_t lastSampleMs = 0;                  ///< Last sample time (ms)
   uint32_t sampleCount = 0;                   ///< Total samples collected
+  bool rtcTimeActive = false;                 ///< True when timestamps currently come from RTC
+  const char* timeSource = "uptime";          ///< "rtc" or "uptime"
+  uint32_t lidarLastFrameMs = 0;              ///< Last parsed TF-Luna frame timestamp
+  uint32_t lidarFrameAgeMs = 0;               ///< Age of latest TF-Luna frame
+  uint32_t lidarFramesParsed = 0;             ///< Parsed TF-Luna frame count
+  uint32_t lidarChecksumErrors = 0;           ///< TF-Luna checksum error count
+  uint32_t lidarSyncLossCount = 0;            ///< TF-Luna sync-loss counter
+  LidarMeasurement lidar = {};                ///< Latest TF-Luna measurement snapshot
+  LidarStatsSnapshot lidarStats = {};         ///< Running stability statistics
   bool sdMounted = false;                     ///< SD mount state
   bool sdInfoValid = false;                   ///< SD info snapshot validity
   bool sdUsageValid = false;                  ///< SD used/free fields validity
@@ -207,4 +216,4 @@ struct SystemStatus {
   uint32_t i2cTaskStackFreeBytes = 0;         ///< I2C task stack high-water mark (bytes remaining)
 };
 
-}  // namespace CO2Control
+}  // namespace TFLunaControl

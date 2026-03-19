@@ -1,6 +1,6 @@
 #include "control/OutputLogic.h"
 
-namespace CO2Control {
+namespace TFLunaControl {
 
 bool OutputLogic::update(float value, bool valid, uint32_t nowMs) {
   bool desired = _state;
@@ -44,4 +44,4 @@ void OutputLogic::reset(bool state, uint32_t nowMs) {
   }
 }
 
-}  // namespace CO2Control
+}  // namespace TFLunaControl

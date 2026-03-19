@@ -3,13 +3,13 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "CO2Control/HardwareSettings.h"
-#include "CO2Control/Health.h"
-#include "CO2Control/RuntimeSettings.h"
-#include "CO2Control/Status.h"
-#include "CO2Control/Types.h"
+#include "TFLunaControl/HardwareSettings.h"
+#include "TFLunaControl/Health.h"
+#include "TFLunaControl/RuntimeSettings.h"
+#include "TFLunaControl/Status.h"
+#include "TFLunaControl/Types.h"
 
-namespace CO2Control {
+namespace TFLunaControl {
 
 enum class I2cOpType : uint8_t {
   NONE = 0,
@@ -122,4 +122,4 @@ class II2cRequestPort {
   virtual HealthState health() const = 0;
 };
 
-}  // namespace CO2Control
+}  // namespace TFLunaControl

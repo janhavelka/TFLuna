@@ -3,20 +3,20 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "CO2Control/AppSettings.h"
-#include "CO2Control/HardwareSettings.h"
-#include "CO2Control/RuntimeSettings.h"
-#include "CO2Control/Status.h"
-#include "CO2Control/Types.h"
+#include "TFLunaControl/AppSettings.h"
+#include "TFLunaControl/HardwareSettings.h"
+#include "TFLunaControl/RuntimeSettings.h"
+#include "TFLunaControl/Status.h"
+#include "TFLunaControl/Types.h"
 
 #if defined(ARDUINO) && __has_include(<AsyncSD/AsyncSD.h>)
 #include <AsyncSD/AsyncSD.h>
-#define CO2CONTROL_HAS_ASYNC_SD 1
+#define TFLUNACTRL_HAS_ASYNC_SD 1
 #else
-#define CO2CONTROL_HAS_ASYNC_SD 0
+#define TFLUNACTRL_HAS_ASYNC_SD 0
 #endif
 
-namespace CO2Control {
+namespace TFLunaControl {
 
 /**
  * @brief SD logging for samples and events.
@@ -129,7 +129,7 @@ class SdLogger {
   void resetAllSessionState(bool clearNames);
   bool ensureAllSessionReady(uint32_t nowMs);
 
-#if CO2CONTROL_HAS_ASYNC_SD
+#if TFLUNACTRL_HAS_ASYNC_SD
   enum class MountStage : uint8_t {
     IDLE = 0,
     WAIT_MOUNT,
@@ -288,4 +288,4 @@ class SdLogger {
   Status _lastError = Ok();
 };
 
-}  // namespace CO2Control
+}  // namespace TFLunaControl

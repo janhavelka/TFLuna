@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 
-namespace CO2Control {
+namespace TFLunaControl {
 
 class RecoveryPolicy {
  public:
@@ -67,4 +67,4 @@ class RecoveryPolicy {
   uint32_t _currentBackoffMs = 1000;
 };
 
-}  // namespace CO2Control
+}  // namespace TFLunaControl

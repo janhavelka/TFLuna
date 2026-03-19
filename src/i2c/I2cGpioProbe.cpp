@@ -8,7 +8,7 @@
 #include "freertos/task.h"
 #endif
 
-namespace CO2Control {
+namespace TFLunaControl {
 
 void I2cGpioProbe::configure(int sdaPin, int sclPin, uint8_t debounceMs) {
   _sdaPin = sdaPin;
@@ -54,4 +54,4 @@ bool I2cGpioProbe::isBusPhysicallyStuck(uint32_t nowMs) const {
 #endif
 }
 
-}  // namespace CO2Control
+}  // namespace TFLunaControl

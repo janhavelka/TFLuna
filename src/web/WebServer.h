@@ -4,14 +4,14 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "CO2Control/HardwareSettings.h"
-#include "CO2Control/RuntimeSettings.h"
-#include "CO2Control/Status.h"
-#include "CO2Control/Types.h"
+#include "TFLunaControl/HardwareSettings.h"
+#include "TFLunaControl/RuntimeSettings.h"
+#include "TFLunaControl/Status.h"
+#include "TFLunaControl/Types.h"
 
-namespace CO2Control {
+namespace TFLunaControl {
 
-class CO2Control;
+class TFLunaControl;
 
 /**
  * @brief SoftAP web server with REST endpoints and WebSocket updates.
@@ -41,7 +41,7 @@ class WebServer {
   /// @brief Clamp requested event count to safe bounds.
   static size_t clampEventCount(size_t requested, size_t capacity = MAX_EVENT_COUNT);
 
-  Status begin(CO2Control* app);
+  Status begin(TFLunaControl* app);
   void end();
 
   Status startAp(const RuntimeSettings& settings);
@@ -89,7 +89,7 @@ class WebServer {
   void noteUiActivity();
   void refreshWifiStatsNow();
 
-  CO2Control* _app = nullptr;
+  TFLunaControl* _app = nullptr;
   WebServerImpl* _impl = nullptr;
   bool _apRunning = false;
   uint32_t _lastBroadcastMs = 0;
@@ -112,4 +112,4 @@ class WebServer {
   bool _psramAvailable = false;
 };
 
-}  // namespace CO2Control
+}  // namespace TFLunaControl

@@ -2,18 +2,18 @@
 
 #include <stdint.h>
 
-#include "CO2Control/HardwareSettings.h"
-#include "CO2Control/Status.h"
+#include "TFLunaControl/HardwareSettings.h"
+#include "TFLunaControl/Status.h"
 
 #ifdef ARDUINO
 #include <StatusLed/StatusLed.h>
 #if __has_include(<StatusLed/Version.h>)
 #include <StatusLed/Version.h>
-static_assert(StatusLed::VERSION_CODE >= 10300, "CO2Control requires StatusLED >= v1.3.0");
+static_assert(StatusLed::VERSION_CODE >= 10300, "TFLunaControl requires StatusLED >= v1.3.0");
 #endif
 #endif
 
-namespace CO2Control {
+namespace TFLunaControl {
 
 /**
  * @brief WS2812 status LED controller.
@@ -90,4 +90,4 @@ class StatusLedAdapter {
 #endif
 };
 
-}  // namespace CO2Control
+}  // namespace TFLunaControl

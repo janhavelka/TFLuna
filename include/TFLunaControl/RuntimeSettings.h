@@ -1,6 +1,6 @@
 /**
  * @file RuntimeSettings.h
- * @brief Runtime settings for CO2Control.
+ * @brief Runtime settings for TFLunaControl.
  */
 
 #pragma once
@@ -9,9 +9,9 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "CO2Control/Status.h"
+#include "TFLunaControl/Status.h"
 
-namespace CO2Control {
+namespace TFLunaControl {
 
 /**
  * @brief User-configurable runtime settings (optionally persisted in NVS).
@@ -21,9 +21,9 @@ namespace CO2Control {
  * Persistence backend is in src/settings/SettingsStore.h/.cpp.
  */
 struct RuntimeSettings {
-  static constexpr uint32_t MIN_SAMPLE_INTERVAL_SEC = 1;
+  static constexpr uint32_t MIN_SAMPLE_INTERVAL_MS = 10;
   // PeriodicTimer uses signed wrap-safe comparisons; keep interval within INT32 range.
-  static constexpr uint32_t MAX_SAMPLE_INTERVAL_SEC = static_cast<uint32_t>(INT32_MAX / 1000L);
+  static constexpr uint32_t MAX_SAMPLE_INTERVAL_MS = static_cast<uint32_t>(INT32_MAX);
 
   static constexpr uint32_t MIN_LOG_ALL_MAX_BYTES = 1;
   static constexpr uint32_t MAX_LOG_ALL_MAX_BYTES = 4000000000UL;
@@ -263,19 +263,36 @@ struct RuntimeSettings {
   static constexpr uint16_t MIN_WEB_MAX_RTC_BODY_BYTES = 64;
   static constexpr uint16_t MAX_WEB_MAX_RTC_BODY_BYTES = 1024;
 
+  static constexpr uint32_t MIN_LIDAR_SERVICE_MS = 1;
+  static constexpr uint32_t MAX_LIDAR_SERVICE_MS = 1000;
+
+  static constexpr uint16_t MIN_LIDAR_SIGNAL_STRENGTH = 0;
+  static constexpr uint16_t MAX_LIDAR_SIGNAL_STRENGTH = 65535;
+
+  static constexpr uint16_t MIN_LIDAR_MAX_DISTANCE_CM = 1;
+  static constexpr uint16_t MAX_LIDAR_MAX_DISTANCE_CM = 1200;
+
+  static constexpr uint32_t MIN_LIDAR_FRAME_STALE_MS = 100;
+  static constexpr uint32_t MAX_LIDAR_FRAME_STALE_MS = 600000;
+
+  static constexpr uint32_t MIN_SERIAL_PRINT_INTERVAL_MS = 100;
+  static constexpr uint32_t MAX_SERIAL_PRINT_INTERVAL_MS = 600000;
+  static constexpr uint8_t MIN_CLI_VERBOSITY = 0;
+  static constexpr uint8_t MAX_CLI_VERBOSITY = 2;
+
   static constexpr float MIN_TEMP_C = -40.0f;
   static constexpr float MAX_TEMP_C = 125.0f;
   static constexpr float MIN_RH_PCT = 0.0f;
   static constexpr float MAX_RH_PCT = 100.0f;
 
-  /// @brief Sample interval in seconds.
-  uint32_t sampleIntervalSec = 600;
+  /// @brief Sample interval in milliseconds.
+  uint32_t sampleIntervalMs = 100;
 
   /// @brief Enable daily CSV logging.
   bool logDailyEnabled = false;
 
   /// @brief Enable all-time CSV logging.
-  bool logAllEnabled = false;
+  bool logAllEnabled = true;
 
   /// @brief Maximum size for logs/all.csv in bytes.
   uint32_t logAllMaxBytes = 3500000000UL;
@@ -296,10 +313,28 @@ struct RuntimeSettings {
   uint8_t logMaxWriteRetries = 3;
 
   /// @brief Base name used for session folder creation (`<name>_00001`).
-  char logSessionName[LOG_SESSION_NAME_BYTES] = "run";
+  char logSessionName[LOG_SESSION_NAME_BYTES] = "tfluna";
 
   /// @brief Maximum size for events.csv before rollover.
   uint32_t logEventsMaxBytes = 1048576;
+
+  /// @brief TF-Luna UART service cadence in milliseconds.
+  uint32_t lidarServiceMs = 10;
+
+  /// @brief Minimum accepted TF-Luna signal strength.
+  uint16_t lidarMinStrength = 100;
+
+  /// @brief Maximum accepted TF-Luna distance in centimeters.
+  uint16_t lidarMaxDistanceCm = 800;
+
+  /// @brief Latest-frame stale threshold for diagnostics and display.
+  uint32_t lidarFrameStaleMs = 1500;
+
+  /// @brief Serial diagnostic summary interval in milliseconds.
+  uint32_t serialPrintIntervalMs = 5000;
+
+  /// @brief CLI detail level (0=compact, 1=normal, 2=verbose).
+  uint8_t cliVerbosity = 1;
 
   /// @brief I2C bus frequency in Hz.
   uint32_t i2cFreqHz = 400000;
@@ -416,7 +451,7 @@ struct RuntimeSettings {
   uint32_t i2cHealthRecentWindowMs = 60000;
 
   /// @brief ENV sensor I2C address.
-  uint8_t i2cEnvAddress = 0x44;
+  uint8_t i2cEnvAddress = 0x76;
 
   /// @brief RTC sensor I2C address.
   uint8_t i2cRtcAddress = 0x51;
@@ -494,10 +529,10 @@ struct RuntimeSettings {
   bool wifiEnabled = false;
 
   /// @brief SoftAP SSID (null-terminated).
-  char apSsid[32] = "CO2Control-XXXX";
+  char apSsid[32] = "TFLuna-XXXX";
 
   /// @brief SoftAP password (null-terminated).
-  char apPass[64] = "co2control";
+  char apPass[64] = "tflunactrl";
 
   /// @brief Auto-off timeout for SoftAP when idle (ms).
   uint32_t apAutoOffMs = 60000;
@@ -533,10 +568,10 @@ struct RuntimeSettings {
   /// @brief CO2 threshold to turn outputs OFF (ppm).
   float co2OffPpm = 900.0f;
 
-  /// @brief Temperature threshold to turn outputs ON (°C).
+  /// @brief Temperature threshold to turn outputs ON (Â°C).
   float tempOnC = 28.0f;
 
-  /// @brief Temperature threshold to turn outputs OFF (°C).
+  /// @brief Temperature threshold to turn outputs OFF (Â°C).
   float tempOffC = 24.0f;
   /// @brief Relative humidity threshold to turn outputs ON (%).
   float rhOnPct = 80.0f;
@@ -596,4 +631,4 @@ struct RuntimeSettings {
   void restoreDefaults();
 };
 
-}  // namespace CO2Control
+}  // namespace TFLunaControl

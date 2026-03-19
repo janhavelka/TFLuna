@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 
-namespace CO2Control {
+namespace TFLunaControl {
 
 class I2cGpioProbe {
  public:
@@ -17,4 +17,4 @@ class I2cGpioProbe {
   uint8_t _debounceMs = 3;
 };
 
-}  // namespace CO2Control
+}  // namespace TFLunaControl

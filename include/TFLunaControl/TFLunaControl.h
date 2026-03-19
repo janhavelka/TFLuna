@@ -1,6 +1,6 @@
 /**
- * @file CO2Control.h
- * @brief Main application class for CO2Control firmware.
+ * @file TFLunaControl.h
+ * @brief Main application class for TFLunaControl firmware.
  */
 
 #pragma once
@@ -8,16 +8,16 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "CO2Control/AppSettings.h"
-#include "CO2Control/HardwareSettings.h"
-#include "CO2Control/I2cRaw.h"
-#include "CO2Control/Health.h"
-#include "CO2Control/I2cScan.h"
-#include "CO2Control/RuntimeSettings.h"
-#include "CO2Control/Status.h"
-#include "CO2Control/Types.h"
+#include "TFLunaControl/AppSettings.h"
+#include "TFLunaControl/HardwareSettings.h"
+#include "TFLunaControl/I2cRaw.h"
+#include "TFLunaControl/Health.h"
+#include "TFLunaControl/I2cScan.h"
+#include "TFLunaControl/RuntimeSettings.h"
+#include "TFLunaControl/Status.h"
+#include "TFLunaControl/Types.h"
 
-namespace CO2Control {
+namespace TFLunaControl {
 
 /**
  * @brief Main firmware application class.
@@ -25,7 +25,7 @@ namespace CO2Control {
  * Implements deterministic begin/tick/end lifecycle with non-blocking behavior.
  * @note Not thread-safe. Call from a single thread (Arduino loop()).
  */
-class CO2Control {
+class TFLunaControl {
  public:
   /// @brief Initialize with configuration.
   /// @param config Hardware configuration.
@@ -172,13 +172,13 @@ class CO2Control {
   /// @return Ok if queued, RESOURCE_BUSY if queue full.
   Status enqueueRecoverI2cBus();
 
-  /// @brief Enqueue explicit EE871 CO2 recovery request.
+  /// @brief Enqueue explicit TF-Luna recovery request.
   /// @return Ok if queued, RESOURCE_BUSY if queue full.
-  Status enqueueRecoverCo2Sensor();
+  Status enqueueRecoverLidarSensor();
 
-  /// @brief Enqueue explicit EE871 CO2 probe/read-now request.
+  /// @brief Enqueue explicit TF-Luna probe/read-now request.
   /// @return Ok if queued, RESOURCE_BUSY if queue full.
-  Status enqueueProbeCo2Sensor();
+  Status enqueueProbeLidarSensor();
 
   /// @brief Enqueue non-disruptive SD probe (mount-state check).
   /// @return Ok if queued, RESOURCE_BUSY if queue full.
@@ -256,4 +256,4 @@ class CO2Control {
   Impl* _impl = nullptr;
 };
 
-}  // namespace CO2Control
+}  // namespace TFLunaControl

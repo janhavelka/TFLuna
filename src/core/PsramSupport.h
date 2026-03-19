@@ -8,15 +8,15 @@
 #include <Arduino.h>
 #if __has_include(<esp_heap_caps.h>)
 #include <esp_heap_caps.h>
-#define CO2CONTROL_HAS_HEAP_CAPS 1
+#define TFLUNACTRL_HAS_HEAP_CAPS 1
 #else
-#define CO2CONTROL_HAS_HEAP_CAPS 0
+#define TFLUNACTRL_HAS_HEAP_CAPS 0
 #endif
 #else
-#define CO2CONTROL_HAS_HEAP_CAPS 0
+#define TFLUNACTRL_HAS_HEAP_CAPS 0
 #endif
 
-namespace CO2Control {
+namespace TFLunaControl {
 namespace PsramSupport {
 
 inline bool isAvailable() {
@@ -63,7 +63,7 @@ inline void* allocPsram(size_t bytes) {
   if (bytes == 0U) {
     return nullptr;
   }
-#if CO2CONTROL_HAS_HEAP_CAPS
+#if TFLUNACTRL_HAS_HEAP_CAPS
   return heap_caps_malloc(bytes, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
 #else
   return nullptr;
@@ -74,7 +74,7 @@ inline void* allocInternal(size_t bytes) {
   if (bytes == 0U) {
     return nullptr;
   }
-#if CO2CONTROL_HAS_HEAP_CAPS
+#if TFLUNACTRL_HAS_HEAP_CAPS
   return heap_caps_malloc(bytes, MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
 #else
   return malloc(bytes);
@@ -85,7 +85,7 @@ inline void freeMemory(void* ptr) {
   if (ptr == nullptr) {
     return;
   }
-#if CO2CONTROL_HAS_HEAP_CAPS
+#if TFLUNACTRL_HAS_HEAP_CAPS
   heap_caps_free(ptr);
 #else
   free(ptr);
@@ -93,4 +93,4 @@ inline void freeMemory(void* ptr) {
 }
 
 }  // namespace PsramSupport
-}  // namespace CO2Control
+}  // namespace TFLunaControl

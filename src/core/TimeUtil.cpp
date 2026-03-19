@@ -2,7 +2,7 @@
 
 #include <stdio.h>
 
-namespace CO2Control {
+namespace TFLunaControl {
 
 static bool isLeapYear(uint16_t year) {
   return ((year % 4) == 0) && (((year % 100) != 0) || ((year % 400) == 0));
@@ -110,4 +110,4 @@ void fromUnixSeconds(uint32_t unixSeconds, RtcTime& out) {
   out.valid = (year >= 2000 && year <= 2099);
 }
 
-}  // namespace CO2Control
+}  // namespace TFLunaControl

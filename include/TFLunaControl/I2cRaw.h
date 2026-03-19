@@ -8,10 +8,10 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "CO2Control/HardwareSettings.h"
-#include "CO2Control/Status.h"
+#include "TFLunaControl/HardwareSettings.h"
+#include "TFLunaControl/Status.h"
 
-namespace CO2Control {
+namespace TFLunaControl {
 
 /// @brief Raw I2C operation type for CLI/task-owned bus operations.
 enum class I2cRawOp : uint8_t {
@@ -81,4 +81,4 @@ struct RtcDebugSnapshot {
   uint32_t updatedMs = 0;
 };
 
-}  // namespace CO2Control
+}  // namespace TFLunaControl

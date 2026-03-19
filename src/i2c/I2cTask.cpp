@@ -10,7 +10,7 @@
 #include <Arduino.h>
 #endif
 
-namespace CO2Control {
+namespace TFLunaControl {
 
 namespace {
 
@@ -71,7 +71,7 @@ inline int32_t roundToInt32(float value) {
   return static_cast<int32_t>(lroundf(value));
 }
 
-#if CO2CONTROL_HAS_BME280_LIB
+#if TFLUNACTRL_HAS_BME280_LIB
 inline BME280::Mode toBmeMode(uint8_t raw) {
   switch (raw) {
     case 0:
@@ -145,7 +145,7 @@ inline BME280::Standby toBmeStandby(uint8_t raw) {
 }
 #endif
 
-#if CO2CONTROL_HAS_SHT3X_LIB
+#if TFLUNACTRL_HAS_SHT3X_LIB
 inline SHT3x::Mode toShtMode(uint8_t raw) {
   switch (raw) {
     case 0:
@@ -195,7 +195,7 @@ inline SHT3x::ClockStretching toShtClockStretching(uint8_t raw) {
 }
 #endif
 
-#if CO2CONTROL_HAS_RV3032_LIB
+#if TFLUNACTRL_HAS_RV3032_LIB
 inline RV3032::BackupSwitchMode toRtcBackupMode(uint8_t raw) {
   switch (raw) {
     case 0:
@@ -267,7 +267,7 @@ inline const char* errShortLabel(Err code) {
   }
 }
 
-#if CO2CONTROL_HAS_SSD1315_LIB
+#if TFLUNACTRL_HAS_SSD1315_LIB
 inline const char* healthShortLabel(HealthState health) {
   switch (health) {
     case HealthState::OK:
@@ -306,31 +306,33 @@ Status I2cTask::begin(const HardwareSettings& config, const RuntimeSettings& set
   _lastStaleResultMs = 0;
   _slowWindowStartMs = UINT32_MAX;
   _slowWindowCount = 0;
-#if CO2CONTROL_HAS_BME280_LIB
+#if TFLUNACTRL_HAS_BME280_LIB
   _envBme.end();
   _envBmeInitialized = false;
   _envBmeAddress = 0;
   _envBmeTimeoutMs = 0;
 #endif
-#if CO2CONTROL_HAS_SHT3X_LIB
+#if TFLUNACTRL_HAS_SHT3X_LIB
   _envSht.end();
   _envShtInitialized = false;
   _envShtAddress = 0;
   _envShtTimeoutMs = 0;
 #endif
-#if CO2CONTROL_HAS_RV3032_LIB
+#if TFLUNACTRL_HAS_RV3032_LIB
   _rtcRv3032.end();
   _rtcRv3032Initialized = false;
   _rtcRv3032Address = 0;
   _rtcRv3032TimeoutMs = 0;
 #endif
   resetRtcDebugSnapshot(0);
-#if CO2CONTROL_HAS_SSD1315_LIB
+#if TFLUNACTRL_HAS_SSD1315_LIB
   _display.end();
   _displayInitialized = false;
   _displayAddress = 0;
   _displayTimeoutMs = 0;
   _displayOfflineThreshold = 0;
+  _displayFlipX = false;
+  _displayFlipY = false;
   _displayNextRecoverMs = 0;
   _displayRtcStatus = Status(Err::NOT_INITIALIZED, 0, "RTC waiting first sample");
   _displayEnvStatus = Status(Err::NOT_INITIALIZED, 0, "ENV waiting first sample");
@@ -498,12 +500,14 @@ void I2cTask::end() {
   _resultQueueNative.clear();
 #endif
 
-#if CO2CONTROL_HAS_SSD1315_LIB
+#if TFLUNACTRL_HAS_SSD1315_LIB
   _display.end();
   _displayInitialized = false;
   _displayAddress = 0;
   _displayTimeoutMs = 0;
   _displayOfflineThreshold = 0;
+  _displayFlipX = false;
+  _displayFlipY = false;
   _displayNextRecoverMs = 0;
   _displayCo2Valid = false;
   _displayCo2Ppm = 0.0f;
@@ -522,19 +526,19 @@ void I2cTask::end() {
     _backend->end();
   }
 
-#if CO2CONTROL_HAS_BME280_LIB
+#if TFLUNACTRL_HAS_BME280_LIB
   _envBme.end();
   _envBmeInitialized = false;
   _envBmeAddress = 0;
   _envBmeTimeoutMs = 0;
 #endif
-#if CO2CONTROL_HAS_SHT3X_LIB
+#if TFLUNACTRL_HAS_SHT3X_LIB
   _envSht.end();
   _envShtInitialized = false;
   _envShtAddress = 0;
   _envShtTimeoutMs = 0;
 #endif
-#if CO2CONTROL_HAS_RV3032_LIB
+#if TFLUNACTRL_HAS_RV3032_LIB
   _rtcRv3032.end();
   _rtcRv3032Initialized = false;
   _rtcRv3032Address = 0;
@@ -661,7 +665,7 @@ void I2cTask::applySettings(const RuntimeSettings& settings, uint32_t nowMs) {
   // uninitialized; the next ensureXxxReady() call inside the I2C task will
   // safely call .end() + .begin() in the correct task context.
 
-#if CO2CONTROL_HAS_BME280_LIB
+#if TFLUNACTRL_HAS_BME280_LIB
   if (_envBmeInitialized &&
       (oldSettings.i2cEnvAddress != settings.i2cEnvAddress ||
        oldSettings.i2cOpTimeoutMs != settings.i2cOpTimeoutMs ||
@@ -677,7 +681,7 @@ void I2cTask::applySettings(const RuntimeSettings& settings, uint32_t nowMs) {
     _envBmeTimeoutMs = 0;
   }
 #endif
-#if CO2CONTROL_HAS_SHT3X_LIB
+#if TFLUNACTRL_HAS_SHT3X_LIB
   if (_envShtInitialized &&
       (oldSettings.i2cEnvAddress != settings.i2cEnvAddress ||
        oldSettings.i2cOpTimeoutMs != settings.i2cOpTimeoutMs ||
@@ -700,7 +704,7 @@ void I2cTask::applySettings(const RuntimeSettings& settings, uint32_t nowMs) {
     _envShtTimeoutMs = 0;
   }
 #endif
-#if CO2CONTROL_HAS_RV3032_LIB
+#if TFLUNACTRL_HAS_RV3032_LIB
   if (_rtcRv3032Initialized &&
       (oldSettings.i2cRtcAddress != settings.i2cRtcAddress ||
        oldSettings.i2cOpTimeoutMs != settings.i2cOpTimeoutMs ||
@@ -713,7 +717,7 @@ void I2cTask::applySettings(const RuntimeSettings& settings, uint32_t nowMs) {
     _rtcRv3032TimeoutMs = 0;
   }
 #endif
-#if CO2CONTROL_HAS_SSD1315_LIB
+#if TFLUNACTRL_HAS_SSD1315_LIB
   if (_displayInitialized &&
       (oldSettings.i2cDisplayAddress != settings.i2cDisplayAddress ||
        oldSettings.i2cOpTimeoutMs != settings.i2cOpTimeoutMs ||
@@ -722,6 +726,8 @@ void I2cTask::applySettings(const RuntimeSettings& settings, uint32_t nowMs) {
     _displayAddress = 0;
     _displayTimeoutMs = 0;
     _displayOfflineThreshold = 0;
+    _displayFlipX = false;
+    _displayFlipY = false;
     _displayNextRecoverMs = 0;
   }
 #endif
@@ -766,7 +772,7 @@ RtcDebugSnapshot I2cTask::getRtcDebugSnapshot() const {
 
 RtcDebugSnapshot I2cTask::makeRtcDebugBase(uint32_t nowMs) const {
   RtcDebugSnapshot snapshot{};
-#if CO2CONTROL_HAS_RV3032_LIB
+#if TFLUNACTRL_HAS_RV3032_LIB
   snapshot.supported = true;
   snapshot.initialized = _rtcRv3032Initialized;
   snapshot.address =
@@ -784,7 +790,7 @@ RtcDebugSnapshot I2cTask::makeRtcDebugBase(uint32_t nowMs) const {
   snapshot.effectiveEepromWrites = rtcEepromWritesEnabled(_settings);
   snapshot.eepromTimeoutMs = _settings.i2cRtcEepromTimeoutMs;
   snapshot.offlineThreshold = _settings.i2cRtcOfflineThreshold;
-#if CO2CONTROL_HAS_RV3032_LIB
+#if TFLUNACTRL_HAS_RV3032_LIB
   snapshot.driverState = static_cast<uint8_t>(_rtcRv3032.state());
   if (_rtcRv3032Initialized) {
     snapshot.eepromBusy = _rtcRv3032.isEepromBusy();
@@ -815,7 +821,7 @@ void I2cTask::resetRtcDebugSnapshot(uint32_t nowMs) {
 
 void I2cTask::refreshRtcDebugSnapshot(uint32_t nowMs) {
   RtcDebugSnapshot snapshot = makeRtcDebugBase(nowMs);
-#if CO2CONTROL_HAS_RV3032_LIB
+#if TFLUNACTRL_HAS_RV3032_LIB
   if (_rtcRv3032Initialized) {
     uint8_t value = 0;
     RV3032::Status rtcStatus = _rtcRv3032.readRegister(kRtcRegStatus, value);
@@ -1113,7 +1119,7 @@ Status I2cTask::recoverBus(uint32_t nowMs) {
   return recoveryStatus;
 }
 
-#if CO2CONTROL_HAS_BME280_LIB
+#if TFLUNACTRL_HAS_BME280_LIB
 BME280::Status I2cTask::bmeI2cWriteThunk(uint8_t addr,
                                          const uint8_t* data,
                                          size_t len,
@@ -1277,7 +1283,7 @@ Status I2cTask::handleBmeTrigger(const I2cRequest& request, I2cResult& result, u
 
   Status st = ensureBmeReady(request.address, nowMs);
   if (!st.ok()) {
-#if CO2CONTROL_HAS_SSD1315_LIB
+#if TFLUNACTRL_HAS_SSD1315_LIB
     _displayEnvStatus = st;
 #endif
     return st;
@@ -1297,14 +1303,14 @@ Status I2cTask::handleBmeTrigger(const I2cRequest& request, I2cResult& result, u
   if (bmeStatus.ok() ||
       bmeStatus.code == BME280::Err::IN_PROGRESS ||
       bmeStatus.code == BME280::Err::BUSY) {
-#if CO2CONTROL_HAS_SSD1315_LIB
+#if TFLUNACTRL_HAS_SSD1315_LIB
     _displayEnvStatus = Ok();
 #endif
     return Ok();
   }
 
   const Status mapped = mapBmeStatus(bmeStatus);
-#if CO2CONTROL_HAS_SSD1315_LIB
+#if TFLUNACTRL_HAS_SSD1315_LIB
   _displayEnvStatus = mapped;
 #endif
   return mapped;
@@ -1313,7 +1319,7 @@ Status I2cTask::handleBmeTrigger(const I2cRequest& request, I2cResult& result, u
 Status I2cTask::handleBmeRead(const I2cRequest& request, I2cResult& result, uint32_t nowMs) {
   Status st = ensureBmeReady(request.address, nowMs);
   if (!st.ok()) {
-#if CO2CONTROL_HAS_SSD1315_LIB
+#if TFLUNACTRL_HAS_SSD1315_LIB
     _displayEnvStatus = st;
 #endif
     return st;
@@ -1326,13 +1332,13 @@ Status I2cTask::handleBmeRead(const I2cRequest& request, I2cResult& result, uint
     if (readStatus.code == BME280::Err::MEASUREMENT_NOT_READY) {
       const Status notReady =
           Status(Err::RESOURCE_BUSY, static_cast<int32_t>(readStatus.code), "BME280 measurement not ready");
-#if CO2CONTROL_HAS_SSD1315_LIB
+#if TFLUNACTRL_HAS_SSD1315_LIB
       _displayEnvStatus = notReady;
 #endif
       return notReady;
     }
     const Status mapped = mapBmeStatus(readStatus);
-#if CO2CONTROL_HAS_SSD1315_LIB
+#if TFLUNACTRL_HAS_SSD1315_LIB
     _displayEnvStatus = mapped;
 #endif
     return mapped;
@@ -1343,7 +1349,7 @@ Status I2cTask::handleBmeRead(const I2cRequest& request, I2cResult& result, uint
       !isfinite(measurement.humidityPct) ||
       !isfinite(pressureHpa)) {
     const Status nonFinite = Status(Err::DATA_CORRUPT, 0, "BME280 non-finite sample");
-#if CO2CONTROL_HAS_SSD1315_LIB
+#if TFLUNACTRL_HAS_SSD1315_LIB
     _displayEnvStatus = nonFinite;
 #endif
     return nonFinite;
@@ -1364,7 +1370,7 @@ Status I2cTask::handleBmeRead(const I2cRequest& request, I2cResult& result, uint
   result.data[5] = static_cast<uint8_t>(pressureX10 & 0xFF);
   result.dataLen = 6;
 
-#if CO2CONTROL_HAS_SSD1315_LIB
+#if TFLUNACTRL_HAS_SSD1315_LIB
   _displayEnvStatus = Ok();
   _displayEnvValid = true;
   _displayEnvTempC = measurement.temperatureC;
@@ -1378,7 +1384,7 @@ Status I2cTask::handleBmeRead(const I2cRequest& request, I2cResult& result, uint
 }
 #endif
 
-#if CO2CONTROL_HAS_SHT3X_LIB
+#if TFLUNACTRL_HAS_SHT3X_LIB
 SHT3x::Status I2cTask::shtI2cWriteThunk(uint8_t addr,
                                         const uint8_t* data,
                                         size_t len,
@@ -1577,7 +1583,7 @@ Status I2cTask::handleShtTrigger(const I2cRequest& request, I2cResult& result, u
 
   Status st = ensureShtReady(request.address, nowMs);
   if (!st.ok()) {
-#if CO2CONTROL_HAS_SSD1315_LIB
+#if TFLUNACTRL_HAS_SSD1315_LIB
     _displayEnvStatus = st;
 #endif
     return st;
@@ -1596,14 +1602,14 @@ Status I2cTask::handleShtTrigger(const I2cRequest& request, I2cResult& result, u
   if (shtStatus.ok() ||
       shtStatus.code == SHT3x::Err::IN_PROGRESS ||
       shtStatus.code == SHT3x::Err::BUSY) {
-#if CO2CONTROL_HAS_SSD1315_LIB
+#if TFLUNACTRL_HAS_SSD1315_LIB
     _displayEnvStatus = Ok();
 #endif
     return Ok();
   }
 
   const Status mapped = mapShtStatus(shtStatus);
-#if CO2CONTROL_HAS_SSD1315_LIB
+#if TFLUNACTRL_HAS_SSD1315_LIB
   _displayEnvStatus = mapped;
 #endif
   return mapped;
@@ -1612,7 +1618,7 @@ Status I2cTask::handleShtTrigger(const I2cRequest& request, I2cResult& result, u
 Status I2cTask::handleShtRead(const I2cRequest& request, I2cResult& result, uint32_t nowMs) {
   Status st = ensureShtReady(request.address, nowMs);
   if (!st.ok()) {
-#if CO2CONTROL_HAS_SSD1315_LIB
+#if TFLUNACTRL_HAS_SSD1315_LIB
     _displayEnvStatus = st;
 #endif
     return st;
@@ -1625,13 +1631,13 @@ Status I2cTask::handleShtRead(const I2cRequest& request, I2cResult& result, uint
     if (readStatus.code == SHT3x::Err::MEASUREMENT_NOT_READY) {
       const Status notReady =
           Status(Err::RESOURCE_BUSY, static_cast<int32_t>(readStatus.code), "SHT3x measurement not ready");
-#if CO2CONTROL_HAS_SSD1315_LIB
+#if TFLUNACTRL_HAS_SSD1315_LIB
       _displayEnvStatus = notReady;
 #endif
       return notReady;
     }
     const Status mapped = mapShtStatus(readStatus);
-#if CO2CONTROL_HAS_SSD1315_LIB
+#if TFLUNACTRL_HAS_SSD1315_LIB
     _displayEnvStatus = mapped;
 #endif
     return mapped;
@@ -1645,7 +1651,7 @@ Status I2cTask::handleShtRead(const I2cRequest& request, I2cResult& result, uint
   result.data[5] = 0x00;
   result.dataLen = 6;
 
-#if CO2CONTROL_HAS_SSD1315_LIB
+#if TFLUNACTRL_HAS_SSD1315_LIB
   const float tempC = (-45.0f + 175.0f * (static_cast<float>(raw.rawTemperature) / 65535.0f));
   const float rhPct = (100.0f * (static_cast<float>(raw.rawHumidity) / 65535.0f));
   _displayEnvStatus = Ok();
@@ -1661,7 +1667,7 @@ Status I2cTask::handleShtRead(const I2cRequest& request, I2cResult& result, uint
 }
 #endif
 
-#if CO2CONTROL_HAS_RV3032_LIB
+#if TFLUNACTRL_HAS_RV3032_LIB
 RV3032::Status I2cTask::rtcI2cWriteThunk(uint8_t addr,
                                          const uint8_t* data,
                                          size_t len,
@@ -1837,7 +1843,7 @@ Status I2cTask::ensureRtcReady(uint8_t address, uint32_t nowMs) {
 Status I2cTask::handleRtcRead(const I2cRequest& request, I2cResult& result, uint32_t nowMs) {
   Status st = ensureRtcReady(request.address, nowMs);
   if (!st.ok()) {
-#if CO2CONTROL_HAS_SSD1315_LIB
+#if TFLUNACTRL_HAS_SSD1315_LIB
     _displayRtcStatus = st;
 #endif
     return st;
@@ -1855,7 +1861,7 @@ Status I2cTask::handleRtcRead(const I2cRequest& request, I2cResult& result, uint
   if (!rtcStatus.ok()) {
     const Status mapped = mapRtcStatus(rtcStatus);
     refreshRtcDebugSnapshot(nowMs);
-#if CO2CONTROL_HAS_SSD1315_LIB
+#if TFLUNACTRL_HAS_SSD1315_LIB
     _displayRtcStatus = mapped;
 #endif
     return mapped;
@@ -1871,7 +1877,7 @@ Status I2cTask::handleRtcRead(const I2cRequest& request, I2cResult& result, uint
   result.data[6] = static_cast<uint8_t>((((dateTime.year % 100U) / 10U) << 4U) | ((dateTime.year % 100U) % 10U));
   result.dataLen = 7;
 
-#if CO2CONTROL_HAS_SSD1315_LIB
+#if TFLUNACTRL_HAS_SSD1315_LIB
   _displayRtcStatus = Ok();
   _displayRtcValid = true;
   _displayRtc.year = dateTime.year;
@@ -1893,14 +1899,14 @@ Status I2cTask::handleRtcSet(const I2cRequest& request, I2cResult& result, uint3
 
   Status st = ensureRtcReady(request.address, nowMs);
   if (!st.ok()) {
-#if CO2CONTROL_HAS_SSD1315_LIB
+#if TFLUNACTRL_HAS_SSD1315_LIB
     _displayRtcStatus = st;
 #endif
     return st;
   }
   if (request.txLen < 8U) {
     const Status shortPayload = Status(Err::INVALID_CONFIG, 0, "RTC set payload too short");
-#if CO2CONTROL_HAS_SSD1315_LIB
+#if TFLUNACTRL_HAS_SSD1315_LIB
     _displayRtcStatus = shortPayload;
 #endif
     return shortPayload;
@@ -1917,7 +1923,7 @@ Status I2cTask::handleRtcSet(const I2cRequest& request, I2cResult& result, uint3
 
   if (!RV3032::RV3032::isValidDateTime(dateTime)) {
     const Status invalidTime = Status(Err::INVALID_CONFIG, 0, "RTC time invalid");
-#if CO2CONTROL_HAS_SSD1315_LIB
+#if TFLUNACTRL_HAS_SSD1315_LIB
     _displayRtcStatus = invalidTime;
 #endif
     return invalidTime;
@@ -1934,13 +1940,71 @@ Status I2cTask::handleRtcSet(const I2cRequest& request, I2cResult& result, uint3
   if (!rtcStatus.ok()) {
     const Status mapped = mapRtcStatus(rtcStatus);
     refreshRtcDebugSnapshot(nowMs);
-#if CO2CONTROL_HAS_SSD1315_LIB
+#if TFLUNACTRL_HAS_SSD1315_LIB
     _displayRtcStatus = mapped;
 #endif
     return mapped;
   }
 
-#if CO2CONTROL_HAS_SSD1315_LIB
+  // RV3032 keeps PORF/VLF validity flags latched until firmware clears them.
+  // After a confirmed manual set, clear those sticky flags so retained time is
+  // reported as valid on subsequent boots instead of looking permanently stale.
+  RV3032::ValidityFlags validity{};
+  rtcStatus = _rtcRv3032.readValidity(validity);
+  if (!rtcStatus.ok() && _rtcRv3032.state() == RV3032::DriverState::OFFLINE) {
+    rtcStatus = _rtcRv3032.recover();
+    if (rtcStatus.ok()) {
+      rtcStatus = _rtcRv3032.readValidity(validity);
+    }
+  }
+  if (!rtcStatus.ok()) {
+    const Status mapped = mapRtcStatus(rtcStatus);
+    refreshRtcDebugSnapshot(nowMs);
+#if TFLUNACTRL_HAS_SSD1315_LIB
+    _displayRtcStatus = mapped;
+#endif
+    return mapped;
+  }
+
+  if (validity.powerOnReset) {
+    rtcStatus = _rtcRv3032.clearPowerOnResetFlag();
+    if (!rtcStatus.ok() && _rtcRv3032.state() == RV3032::DriverState::OFFLINE) {
+      rtcStatus = _rtcRv3032.recover();
+      if (rtcStatus.ok()) {
+        rtcStatus = _rtcRv3032.clearPowerOnResetFlag();
+      }
+    }
+    if (!rtcStatus.ok()) {
+      const Status mapped = mapRtcStatus(rtcStatus);
+      refreshRtcDebugSnapshot(nowMs);
+#if TFLUNACTRL_HAS_SSD1315_LIB
+      _displayRtcStatus = mapped;
+#endif
+      return mapped;
+    }
+  }
+
+  if (validity.voltageLow) {
+    rtcStatus = _rtcRv3032.clearVoltageLowFlag();
+    if (!rtcStatus.ok() && _rtcRv3032.state() == RV3032::DriverState::OFFLINE) {
+      rtcStatus = _rtcRv3032.recover();
+      if (rtcStatus.ok()) {
+        rtcStatus = _rtcRv3032.clearVoltageLowFlag();
+      }
+    }
+    if (!rtcStatus.ok()) {
+      const Status mapped = mapRtcStatus(rtcStatus);
+      refreshRtcDebugSnapshot(nowMs);
+#if TFLUNACTRL_HAS_SSD1315_LIB
+      _displayRtcStatus = mapped;
+#endif
+      return mapped;
+    }
+  }
+
+  _rtcRv3032.tick(nowMs);
+
+#if TFLUNACTRL_HAS_SSD1315_LIB
   _displayRtcStatus = Ok();
   _displayRtcValid = true;
   _displayRtc.year = dateTime.year;
@@ -1958,7 +2022,7 @@ Status I2cTask::handleRtcSet(const I2cRequest& request, I2cResult& result, uint3
 }
 #endif
 
-#if CO2CONTROL_HAS_SSD1315_LIB
+#if TFLUNACTRL_HAS_SSD1315_LIB
 SSD1315Api::Status I2cTask::displayI2cWriteThunk(uint8_t addr,
                                               const uint8_t* data,
                                               size_t len,
@@ -2056,7 +2120,9 @@ Status I2cTask::ensureDisplayReady(uint8_t address, uint32_t nowMs) {
   if (_displayInitialized &&
       _displayAddress == address &&
       _displayTimeoutMs == _settings.i2cOpTimeoutMs &&
-      _displayOfflineThreshold == _settings.i2cMaxConsecutiveFailures) {
+      _displayOfflineThreshold == _settings.i2cMaxConsecutiveFailures &&
+      _displayFlipX == _config.displayFlipX &&
+      _displayFlipY == _config.displayFlipY) {
     return Ok();
   }
 
@@ -2065,6 +2131,8 @@ Status I2cTask::ensureDisplayReady(uint8_t address, uint32_t nowMs) {
   _displayAddress = address;
   _displayTimeoutMs = _settings.i2cOpTimeoutMs;
   _displayOfflineThreshold = _settings.i2cMaxConsecutiveFailures;
+  _displayFlipX = _config.displayFlipX;
+  _displayFlipY = _config.displayFlipY;
   _displayNextRecoverMs = 0;
 
   SSD1315Api::Config cfg{};
@@ -2084,6 +2152,8 @@ Status I2cTask::ensureDisplayReady(uint8_t address, uint32_t nowMs) {
   cfg.inactivitySleepMs = 0;
   cfg.pageCycleMs = 0;
   cfg.offlineThreshold = _settings.i2cMaxConsecutiveFailures;
+  cfg.flipX = _config.displayFlipX;
+  cfg.flipY = _config.displayFlipY;
 
   const SSD1315Api::Status beginStatus = _display.begin(cfg);
   const Status mapped = mapDisplayStatus(beginStatus);
@@ -2132,19 +2202,15 @@ void I2cTask::renderDisplayFrame(uint32_t nowMs) {
   _display.drawText(0, 16, line);
 
   if (_displayCo2Valid) {
-    int32_t co2X10 = roundToInt32(_displayCo2Ppm * 10.0f);
-    if (co2X10 < 0) {
-      co2X10 = 0;
-    } else if (co2X10 > 500000) {
-      co2X10 = 500000;
+    int32_t distanceCm = roundToInt32(_displayCo2Ppm);
+    if (distanceCm < 0) {
+      distanceCm = 0;
+    } else if (distanceCm > 120000) {
+      distanceCm = 120000;
     }
-    snprintf(line,
-             sizeof(line),
-             "CO2 %ld.%ldppm",
-             static_cast<long>(co2X10 / 10),
-             static_cast<long>(co2X10 % 10));
+    snprintf(line, sizeof(line), "DIST %ldcm", static_cast<long>(distanceCm));
   } else {
-    snprintf(line, sizeof(line), "CO2 n/a");
+    snprintf(line, sizeof(line), "DIST n/a");
   }
   _display.drawText(0, 24, line);
 
@@ -2331,7 +2397,7 @@ I2cResult I2cTask::processRequest(const I2cRequest& request, uint32_t nowMs) {
   if (request.deadlineMs != 0 && static_cast<int32_t>(nowMs - request.deadlineMs) > 0) {
     result.status = Status(Err::TIMEOUT, 0, "I2C request expired before execution");
     result.late = true;
-    // Don't call updateMetricsError / recoveryPolicy.onFailure here —
+    // Don't call updateMetricsError / recoveryPolicy.onFailure here â€”
     // the orchestrator independently counts the failure via
     // handleExpiredInFlight / processResult.  Counting here as well
     // double-inflates bus consecutiveErrors and recovery counters.
@@ -2389,7 +2455,7 @@ I2cResult I2cTask::processRequest(const I2cRequest& request, uint32_t nowMs) {
   } else if (request.op == I2cOpType::RECOVER) {
     opStatus = recoverBus(nowMs);
     result.durationUs = 0;
-#if CO2CONTROL_HAS_RV3032_LIB
+#if TFLUNACTRL_HAS_RV3032_LIB
   } else if (request.deviceId == DeviceId::RTC &&
              request.op == I2cOpType::WRITE_READ) {
     const uint32_t startedUs = SystemClock::nowUs();
@@ -2401,7 +2467,7 @@ I2cResult I2cTask::processRequest(const I2cRequest& request, uint32_t nowMs) {
     opStatus = handleRtcSet(request, result, nowMs);
     result.durationUs = SystemClock::nowUs() - startedUs;
 #endif
-#if CO2CONTROL_HAS_BME280_LIB
+#if TFLUNACTRL_HAS_BME280_LIB
   } else if ((request.op == I2cOpType::ENV_TRIGGER_ONESHOT ||
               request.op == I2cOpType::ENV_READ_ONESHOT) &&
              isBme280Address(request.address)) {
@@ -2413,7 +2479,7 @@ I2cResult I2cTask::processRequest(const I2cRequest& request, uint32_t nowMs) {
     }
     result.durationUs = SystemClock::nowUs() - startedUs;
 #endif
-#if CO2CONTROL_HAS_SHT3X_LIB
+#if TFLUNACTRL_HAS_SHT3X_LIB
   } else if ((request.op == I2cOpType::ENV_TRIGGER_ONESHOT ||
               request.op == I2cOpType::ENV_READ_ONESHOT) &&
              isSht3xAddress(request.address)) {
@@ -2425,7 +2491,7 @@ I2cResult I2cTask::processRequest(const I2cRequest& request, uint32_t nowMs) {
     }
     result.durationUs = SystemClock::nowUs() - startedUs;
 #endif
-#if CO2CONTROL_HAS_SSD1315_LIB
+#if TFLUNACTRL_HAS_SSD1315_LIB
   } else if (request.op == I2cOpType::DISPLAY_REFRESH) {
     const uint32_t startedUs = SystemClock::nowUs();
     opStatus = handleDisplayRefresh(request, result, nowMs);
@@ -2587,4 +2653,4 @@ void I2cTask::taskLoop() {
 }
 #endif
 
-}  // namespace CO2Control
+}  // namespace TFLunaControl

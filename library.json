@@ -1,15 +1,19 @@
 {
-  "name": "CO2Control",
-  "version": "1.4.1",
-  "description": "Production-grade ESP32-S2 firmware for CO2Control with deterministic tick-based architecture.",
+  "name": "TFLunaControl",
+  "version": "1.5.0",
+  "description": "ESP32-S3 TF-Luna stability firmware with deterministic app lifecycle, SSD1315 OLED, RV3032 RTC, SD logging, web UI, and serial CLI diagnostics.",
   "keywords": [
     "esp32",
     "esp32-s2",
+    "esp32-s3",
     "arduino",
     "platformio",
     "embedded",
     "firmware",
-    "co2",
+    "lidar",
+    "tfluna",
+    "diagnostics",
+    "logging",
     "non-blocking"
   ],
   "authors": [
@@ -21,13 +25,13 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/janhavelka/CO2Control.git"
+    "url": "https://github.com/janhavelka/TFLuna.git"
   },
   "license": "MIT",
-  "homepage": "https://github.com/janhavelka/CO2Control",
+  "homepage": "https://github.com/janhavelka/TFLuna",
   "frameworks": ["arduino"],
   "platforms": ["espressif32"],
-  "headers": ["CO2Control/CO2Control.h"],
+  "headers": ["TFLunaControl/TFLunaControl.h"],
   "build": {
     "includeDir": "include",
     "srcDir": "src"

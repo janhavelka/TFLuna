@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Architecture/security conformance gates for CO2Control."""
+"""Architecture/security conformance gates for TFLunaControl."""
 
 from __future__ import annotations
 
@@ -131,8 +131,8 @@ def gate_async_web_mutators() -> list[Failure]:
         "enqueueSetOutputChannelTest",
         "enqueueProbeSdCard",
         "enqueueRecoverI2cBus",
-        "enqueueRecoverCo2Sensor",
-        "enqueueProbeCo2Sensor",
+        "enqueueRecoverLidarSensor",
+        "enqueueProbeLidarSensor",
         "enqueueScanI2cBus",
         "enqueueI2cProbeAddress",
     }

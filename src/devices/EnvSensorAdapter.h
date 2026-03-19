@@ -1,11 +1,11 @@
 #pragma once
 
-#include "CO2Control/HardwareSettings.h"
-#include "CO2Control/Health.h"
-#include "CO2Control/Status.h"
-#include "CO2Control/Types.h"
+#include "TFLunaControl/HardwareSettings.h"
+#include "TFLunaControl/Health.h"
+#include "TFLunaControl/Status.h"
+#include "TFLunaControl/Types.h"
 
-namespace CO2Control {
+namespace TFLunaControl {
 
 class I2cOrchestrator;
 
@@ -28,4 +28,4 @@ class EnvSensorAdapter {
   uint32_t _consecutiveFailures = 0;
 };
 
-}  // namespace CO2Control
+}  // namespace TFLunaControl
