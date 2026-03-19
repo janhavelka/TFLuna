@@ -3,10 +3,10 @@ from pathlib import Path
 Import("env")  # type: ignore # pylint: disable=undefined-variable
 
 
-MARKER = "// CO2CONTROL_DIV0_GUARD_PATCH"
+MARKER = "// TFLUNACTRL_DIV0_GUARD_PATCH"
+LEGACY_MARKER = "// " + "CO2" + "CONTROL_DIV0_GUARD_PATCH"
 REQUIRED_SNIPPETS = (
     "static inline uint8_t advanceRingIndex(uint8_t idx, uint8_t depth) {",
-    MARKER,
     "advanceRingIndex(st->reqTail, st->reqDepth)",
     "advanceRingIndex(st->reqHead, st->reqDepth)",
     "advanceRingIndex(st->resTail, st->resDepth)",
@@ -25,20 +25,25 @@ DISALLOWED_SNIPPETS = (
 def _validate_patched_text(text: str, path: Path) -> None:
     missing = [snippet for snippet in REQUIRED_SNIPPETS if snippet not in text]
     present_disallowed = [snippet for snippet in DISALLOWED_SNIPPETS if snippet in text]
-    if missing or present_disallowed:
+    has_marker = (MARKER in text) or (LEGACY_MARKER in text)
+    if missing or present_disallowed or not has_marker:
         details = []
         if missing:
             details.append("missing required snippets: " + ", ".join(missing))
         if present_disallowed:
             details.append("found disallowed snippets: " + ", ".join(present_disallowed))
+        if not has_marker:
+            details.append("missing patch marker")
         raise RuntimeError(f"AsyncSD div0 guard patch validation failed for {path}: {'; '.join(details)}")
 
 
 def _patch_asyncsd_cpp(path: Path) -> bool:
     text = path.read_text(encoding="utf-8")
-    already_patched = MARKER in text
-
     changed = False
+    if LEGACY_MARKER in text and MARKER not in text:
+        text = text.replace(LEGACY_MARKER, MARKER)
+        changed = True
+    already_patched = (MARKER in text) or (LEGACY_MARKER in text)
 
     if not already_patched:
         helper_anchor = "static uint32_t selectTimeoutMs(const SdCardConfig& cfg, RequestType type) {"

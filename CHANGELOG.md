@@ -79,9 +79,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - E2 bus managed-settings EEPROM writes are now applied one parameter per tick instead of all at once
-  - Converts `Co2Adapter::applyManagedDeviceSettings()` to a staged state machine (6 stages)
+  - Converts managed E2 settings application to a staged state machine (6 stages)
   - Caps worst-case per-tick E2 contribution to ~150-300 ms (was ~1000 ms when all 6 params needed writes)
-  - CO2 readings continue concurrently during multi-tick settings application
+  - E2 readings continue concurrently during multi-tick settings application
 - `attemptBeginOrRecover()` defers managed-settings application to the `readOnce()` tick loop instead of applying all settings in a single blocking call after driver init
 - Events timeline and CSV export (from v1.0.0 web UI fixes) now ship in this release
 
@@ -93,11 +93,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.0.0] - 2026-02-22
 
 ### Added
-- CO2Control firmware architecture with deterministic begin/tick/end lifecycle
+- TFLunaControl firmware architecture with deterministic begin/tick/end lifecycle
 - Unified Status/Health model and device status reporting
 - SD logging with daily files plus single all-time CSV (AsyncSD 1.2.0)
 - SoftAP web UI with REST endpoints and WebSocket updates
-- CO2 threshold control with hysteresis and min on/off times
+- Distance threshold control with hysteresis and min on/off times
 - I2C task-owned bus architecture with staged recovery and exponential backoff
 - System resource monitor (heap, stack, tick latency) in web UI
 - Native unit test environment (38 tests)
@@ -107,7 +107,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Real-time graph data API with preallocated scratch buffers
 
 ### Changed
-- Rebranded template to CO2Control and updated documentation
+- Rebranded template to TFLunaControl and updated documentation
 
 ### Fixed
 - CRITICAL: Tick/I2C metric counter overflows (C1–C4) — widened to uint64_t
@@ -135,9 +135,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Initial release with template structure
 - ESP32-S2 and ESP32-S3 support
 
-[Unreleased]: https://github.com/janhavelka/CO2Control/compare/v1.3.0...HEAD
-[1.3.0]: https://github.com/janhavelka/CO2Control/compare/v1.2.0...v1.3.0
-[1.2.0]: https://github.com/janhavelka/CO2Control/compare/v1.1.0...v1.2.0
-[1.1.0]: https://github.com/janhavelka/CO2Control/compare/v1.0.0...v1.1.0
-[1.0.0]: https://github.com/janhavelka/CO2Control/compare/v0.1.0...v1.0.0
-[0.1.0]: https://github.com/janhavelka/CO2Control/releases/tag/v0.1.0
+[Unreleased]: https://github.com/janhavelka/TFLuna/compare/v1.3.0...HEAD
+[1.3.0]: https://github.com/janhavelka/TFLuna/compare/v1.2.0...v1.3.0
+[1.2.0]: https://github.com/janhavelka/TFLuna/compare/v1.1.0...v1.2.0
+[1.1.0]: https://github.com/janhavelka/TFLuna/compare/v1.0.0...v1.1.0
+[1.0.0]: https://github.com/janhavelka/TFLuna/compare/v0.1.0...v1.0.0
+[0.1.0]: https://github.com/janhavelka/TFLuna/releases/tag/v0.1.0

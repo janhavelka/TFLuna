@@ -1,4 +1,4 @@
-# AGENTS.md - CO2Control Firmware Engineering Guidelines
+# AGENTS.md - TFLunaControl Firmware Engineering Guidelines
 
 ## Role
 You are a professional embedded software engineer working on production-grade ESP32 systems.
@@ -16,7 +16,7 @@ These rules are binding.
 
 ---
 
-## Hardware Overview (CO2Control)
+## Hardware Overview (TFLuna)
 - MCU: ESP32-S2 (N4R2)
 - SPI: SD card for logging
 - I2C: ENV sensor (BME280 or SHT31 one-shot), RTC
@@ -31,7 +31,7 @@ These rules are binding.
 ## Repository Model
 
 ```
-include/CO2Control/   public API headers
+include/TFLunaControl/   public API headers
 src/                  implementation
   main.cpp            firmware entrypoint (board placeholder pins)
   core/               generic logic helpers
@@ -58,7 +58,7 @@ void end();
 ```
 
 ### 2) Cooperative Main Loop
-- `CO2Control::tick()` is cooperative and bounded.
+- `TFLunaControl::tick()` is cooperative and bounded.
 - No unbounded waits and no `delay()` in library code.
 - Long operations are split across ticks or moved to dedicated tasks.
 - Async web callbacks must not mutate firmware state directly. Use command queue for mutations and snapshot APIs for reads.
@@ -86,7 +86,7 @@ Non-negotiable ownership rule:
 - No web handler, adapter, or orchestration code accesses the I2C driver directly.
 
 Data flow:
-1. `CO2Control::tick()` drives `I2cOrchestrator`.
+1. `TFLunaControl::tick()` drives `I2cOrchestrator`.
 2. `I2cOrchestrator` schedules requests and enqueues them to `I2cTask`.
 3. `I2cTask` executes requests in dedicated FreeRTOS task context.
 4. Results are queued back and consumed by `I2cOrchestrator` in `tick()` context.
@@ -198,7 +198,7 @@ pio test -e native
 ```
 
 Optional stress harness build:
-- Define `CO2CONTROL_STRESS_MODE=1` (e.g. extra build flag) to enable controlled command/event churn from `src/main.cpp` for on-target validation.
+- Define `TFLUNACTRL_STRESS_MODE=1` (e.g. extra build flag) to enable controlled command/event churn from `src/main.cpp` for on-target validation.
 - This mode is disabled by default and must not be enabled in production release binaries.
 
 ---

@@ -60,7 +60,8 @@ enum EventCode : uint16_t {
   EVENT_LIDAR_RECOVERY_REQUESTED = 12,
   EVENT_OUTPUT_TEST = 13,
   EVENT_ENV_HEALTH_CHANGE = 14,
-  EVENT_RTC_HEALTH_CHANGE = 15
+  EVENT_RTC_HEALTH_CHANGE = 15,
+  EVENT_LIDAR_STATS_RESET = 16
 };
 
 static constexpr uint32_t LOGGER_EVENT_THROTTLE_MS = 10000UL;
@@ -84,6 +85,7 @@ enum class AppCommandType : uint8_t {
   RECOVER_I2C,
   RECOVER_LIDAR,
   PROBE_LIDAR,
+  RESET_LIDAR_STATS,
   PROBE_SD,
   SCAN_I2C,
   RAW_I2C
@@ -867,6 +869,10 @@ void TFLunaControl::tick(uint32_t nowMs) {
       tickPhaseCo2Us += co2ElapsedUs;
       tickPhaseCmdOverlapUs += co2ElapsedUs;
       updateStatusLocked(DeviceId::LIDAR, _impl->lidar.health(), commandStatus);
+    } else if (command.type == AppCommandType::RESET_LIDAR_STATS) {
+      _impl->lidar.resetStats();
+      pushEvent(nowMs, EVENT_LIDAR_STATS_RESET, "lidar stats reset");
+      commandStatus = Ok();
     } else if (command.type == AppCommandType::PROBE_SD) {
       commandStatus = _impl->sdLogger.probe(nowMs);
       updateStatusLocked(DeviceId::SD, commandStatus.ok() ? HealthState::OK : HealthState::DEGRADED, commandStatus);
@@ -2280,6 +2286,21 @@ Status TFLunaControl::enqueueProbeLidarSensor() {
 
   AppCommand cmd;
   cmd.type = AppCommandType::PROBE_LIDAR;
+  cmd.persist = false;
+
+  if (!_impl->enqueueCommand(cmd, currentMs())) {
+    return Status(Err::RESOURCE_BUSY, 0, "command queue full");
+  }
+  return Ok();
+}
+
+Status TFLunaControl::enqueueResetLidarStats() {
+  if (!_initialized || !_impl) {
+    return Status(Err::NOT_INITIALIZED, 0, "not initialized");
+  }
+
+  AppCommand cmd;
+  cmd.type = AppCommandType::RESET_LIDAR_STATS;
   cmd.persist = false;
 
   if (!_impl->enqueueCommand(cmd, currentMs())) {

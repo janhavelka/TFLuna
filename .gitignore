@@ -38,4 +38,4 @@ wifi_credentials.h
 *.log
 
 # Auto-generated files
-include/CO2Control/Version.h
+include/TFLunaControl/Version.h

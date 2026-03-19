@@ -180,6 +180,10 @@ class TFLunaControl {
   /// @return Ok if queued, RESOURCE_BUSY if queue full.
   Status enqueueProbeLidarSensor();
 
+  /// @brief Enqueue reset of running TF-Luna distance statistics.
+  /// @return Ok if queued, RESOURCE_BUSY if queue full.
+  Status enqueueResetLidarStats();
+
   /// @brief Enqueue non-disruptive SD probe (mount-state check).
   /// @return Ok if queued, RESOURCE_BUSY if queue full.
   Status enqueueProbeSdCard();

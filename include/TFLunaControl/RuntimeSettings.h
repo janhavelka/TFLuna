@@ -373,7 +373,7 @@ struct RuntimeSettings {
   uint32_t i2cRtcPollMs = 1000;
 
   /// @brief Poll interval for future I2C display refresh in milliseconds.
-  uint32_t i2cDisplayPollMs = 1000;
+  uint32_t i2cDisplayPollMs = 250;
 
   /// @brief Wait between ENV one-shot trigger and read phases.
   uint32_t i2cEnvConversionWaitMs = 30;

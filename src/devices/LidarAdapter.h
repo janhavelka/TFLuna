@@ -31,6 +31,7 @@ class LidarAdapter {
   Status forceRecover(uint32_t nowMs);
   Status readOnce(Sample& sample, uint32_t nowMs);
   Status probeOnce(Sample& sample, uint32_t nowMs);
+  void resetStats();
 
   bool latestMeasurement(LidarMeasurement& out) const;
   LidarStatsSnapshot statsSnapshot() const;

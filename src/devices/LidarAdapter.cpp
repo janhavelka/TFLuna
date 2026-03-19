@@ -198,6 +198,10 @@ Status LidarAdapter::probeOnce(Sample& sample, uint32_t nowMs) {
 #endif
 }
 
+void LidarAdapter::resetStats() {
+  _stats.reset();
+}
+
 bool LidarAdapter::latestMeasurement(LidarMeasurement& out) const {
   if (!_haveLatest) {
     return false;

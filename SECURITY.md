@@ -11,7 +11,7 @@
 If you discover a security vulnerability within this firmware, please follow responsible disclosure:
 
 1. **Do NOT** open a public GitHub issue.
-2. Email the maintainer at: `security@co2control.local` (replace with actual email).
+2. Email the maintainer at: `security@tfluna.local` (replace with actual email).
 3. Include:
    - A description of the vulnerability
    - Steps to reproduce

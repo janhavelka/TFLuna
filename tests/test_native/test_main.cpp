@@ -16,6 +16,7 @@
 #include "core/RingBuffer.h"
 #include "core/Scheduler.h"
 #include "core/ApiJson.h"
+#include "core/LidarStats.h"
 #include "TFLunaControl/RuntimeSettings.h"
 #include "TFLunaControl/Types.h"
 #include "devices/StatusLedAdapter.h"
@@ -716,6 +717,37 @@ void test_log_flush_due_logic() {
   TEST_ASSERT_TRUE(SdLogger::shouldAttemptFlush(2000, 1000, 1000));
 }
 
+void test_lidar_stats_reset_clears_running_window() {
+  LidarStats stats;
+  LidarMeasurement measurement{};
+  measurement.validFrame = true;
+  measurement.signalOk = true;
+  measurement.distanceCm = 120U;
+  measurement.strength = 40U;
+  stats.recordMeasurement(measurement);
+
+  measurement.distanceCm = 180U;
+  measurement.strength = 60U;
+  stats.recordMeasurement(measurement);
+
+  LidarStatsSnapshot snapshot = stats.snapshot();
+  TEST_ASSERT_TRUE(snapshot.hasDistanceStats);
+  TEST_ASSERT_EQUAL_UINT64(2U, snapshot.totalFrames);
+  TEST_ASSERT_EQUAL_UINT64(2U, snapshot.validSamples);
+  TEST_ASSERT_FLOAT_WITHIN(0.01f, 120.0f, snapshot.minDistanceCm);
+  TEST_ASSERT_FLOAT_WITHIN(0.01f, 180.0f, snapshot.maxDistanceCm);
+
+  stats.reset();
+  snapshot = stats.snapshot();
+  TEST_ASSERT_FALSE(snapshot.hasDistanceStats);
+  TEST_ASSERT_EQUAL_UINT64(0U, snapshot.totalFrames);
+  TEST_ASSERT_EQUAL_UINT64(0U, snapshot.validSamples);
+  TEST_ASSERT_EQUAL_UINT64(0U, snapshot.invalidSamples);
+  TEST_ASSERT_EQUAL_UINT64(0U, snapshot.weakSamples);
+  TEST_ASSERT_FLOAT_WITHIN(0.001f, 0.0f, snapshot.minDistanceCm);
+  TEST_ASSERT_FLOAT_WITHIN(0.001f, 0.0f, snapshot.maxDistanceCm);
+}
+
 void test_web_server_lifecycle_reinit_safe() {
   WebServer web;
   TFLunaControl::TFLunaControl app;
@@ -753,6 +785,52 @@ void test_web_graph_events_no_heap_alloc_path() {
   TEST_ASSERT_NOT_NULL(strstr(text, "graphScratchCapacity"));
   TEST_ASSERT_NOT_NULL(strstr(text, "eventScratchCapacity"));
   TEST_ASSERT_NOT_NULL(strstr(text, "OrderedWebReadGuard"));
+}
+
+void test_web_lidar_stats_reset_controls_present() {
+  std::string webSource;
+  std::string pageSource;
+  TEST_ASSERT_TRUE(loadTextFile("src/web/WebServer.cpp", webSource));
+  TEST_ASSERT_TRUE(loadTextFile("src/web/WebPages.h", pageSource));
+
+  TEST_ASSERT_NOT_NULL(strstr(webSource.c_str(), "/api/device/reset_stats"));
+  TEST_ASSERT_NOT_NULL(strstr(webSource.c_str(), "enqueueResetLidarStats"));
+  TEST_ASSERT_NOT_NULL(strstr(pageSource.c_str(), "Reset Stats"));
+  TEST_ASSERT_NOT_NULL(strstr(pageSource.c_str(), "reset_stats"));
+}
+
+void test_faster_distance_refresh_defaults() {
+  AppSettings app;
+  TEST_ASSERT_EQUAL_UINT32(500U, app.webBroadcastMs);
+  TEST_ASSERT_EQUAL_UINT32(2000U, app.webUiGraphRefreshMs);
+
+  RuntimeSettings settings;
+  settings.restoreDefaults();
+  TEST_ASSERT_EQUAL_UINT32(250U, settings.i2cDisplayPollMs);
+}
+
+void test_web_live_device_tab_rerenders_distance_stats() {
+  std::string pageSource;
+  TEST_ASSERT_TRUE(loadTextFile("src/web/WebPages.h", pageSource));
+  const char* text = pageSource.c_str();
+
+  TEST_ASSERT_NOT_NULL(strstr(text, "const UI_GRAPH_REFRESH_MS=2000;"));
+  TEST_ASSERT_NOT_NULL(strstr(text, "const STATUS_POLL_MS=1000;"));
+  TEST_ASSERT_NOT_NULL(strstr(text, "if(activeTab==='devices'){devs()}"));
+}
+
+void test_web_i2c_settings_are_cli_only() {
+  std::string pageSource;
+  TEST_ASSERT_TRUE(loadTextFile("src/web/WebPages.h", pageSource));
+  const char* text = pageSource.c_str();
+
+  TEST_ASSERT_NOT_NULL(strstr(text, "I2C tuning is CLI-only."));
+  TEST_ASSERT_NOT_NULL(strstr(text, "const DM={i2c_bus:[],sd:[],env:[],rtc:[],lidar:["));
+  TEST_ASSERT_NOT_NULL(strstr(text, "else if(n==='settings'){Promise.all([getSet(),stOnce()])}"));
+  TEST_ASSERT_NOT_NULL(strstr(text, "if(activeTab==='settings'){await getSet();return}"));
+  TEST_ASSERT_NULL(strstr(text, "env-model"));
+  TEST_ASSERT_NULL(strstr(text, "queueRtcBackupSetup"));
+  TEST_ASSERT_NULL(strstr(text, "rtc-setup-backup"));
 }
 
 void test_no_unbounded_state_mutex_waits() {
@@ -1753,9 +1831,14 @@ int main(int argc, char** argv) {
   RUN_TEST(test_settings_json_write_only_password);
   RUN_TEST(test_led_health_debounce_logic);
   RUN_TEST(test_log_flush_due_logic);
+  RUN_TEST(test_lidar_stats_reset_clears_running_window);
   RUN_TEST(test_web_server_lifecycle_reinit_safe);
   RUN_TEST(test_web_request_count_clamps);
   RUN_TEST(test_web_graph_events_no_heap_alloc_path);
+  RUN_TEST(test_web_lidar_stats_reset_controls_present);
+  RUN_TEST(test_faster_distance_refresh_defaults);
+  RUN_TEST(test_web_live_device_tab_rerenders_distance_stats);
+  RUN_TEST(test_web_i2c_settings_are_cli_only);
   RUN_TEST(test_no_unbounded_state_mutex_waits);
   RUN_TEST(test_nothrow_allocation_paths_for_runtime_objects);
   RUN_TEST(test_i2c_token_wrap_guards_present);

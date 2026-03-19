@@ -42,13 +42,13 @@ struct AppSettings {
   uint16_t webPort = 80;
 
   /// @brief WebSocket broadcast interval in milliseconds.
-  uint32_t webBroadcastMs = 1000;
+  uint32_t webBroadcastMs = 500;
 
   /// @brief UI WebSocket reconnect delay (served by `/` HTML page).
   uint32_t webUiWsReconnectMs = 2000;
 
   /// @brief UI graph refresh interval (served by `/` HTML page).
-  uint32_t webUiGraphRefreshMs = 5000;
+  uint32_t webUiGraphRefreshMs = 2000;
 
   /// @brief UI events refresh interval (served by `/` HTML page).
   uint32_t webUiEventsRefreshMs = 10000;

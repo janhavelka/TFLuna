@@ -976,6 +976,60 @@ Status WebServer::setupHandlers() {
     (void)appendRequestBodyChunk(request, data, len, index, total, kDeviceActionBodyMaxBytes);
   });
 
+  _impl->server.on("/api/device/reset_stats", HTTP_POST, [this](AsyncWebServerRequest* request) {
+    if (_app == nullptr) {
+      request->send(503, "text/plain", "App not ready");
+      return;
+    }
+    const String body = extractRequestBody(request);
+    if (body.isEmpty()) {
+      request->send(400, "text/plain", "Missing body");
+      return;
+    }
+    StaticJsonDocument<256> doc;
+    const DeserializationError err = deserializeJson(doc, body);
+    if (err) {
+      request->send(400, "text/plain", "Invalid JSON");
+      return;
+    }
+    const char* dev = doc["device"].as<const char*>();
+    if (dev == nullptr || dev[0] == '\0') {
+      request->send(400, "text/plain", "Missing device");
+      return;
+    }
+    if (strcmp(dev, "lidar") != 0 && strcmp(dev, "tfluna") != 0 &&
+        strcmp(dev, "co2") != 0) {
+      request->send(400, "text/plain", "unsupported device");
+      return;
+    }
+
+    const Status st = _app->enqueueResetLidarStats();
+    if (!st.ok()) {
+      if (st.code == Err::RESOURCE_BUSY) {
+        request->send(503, "text/plain", st.msg);
+      } else {
+        request->send(400, "text/plain", st.msg);
+      }
+      return;
+    }
+
+    StaticJsonDocument<192> res;
+    res["queued"] = true;
+    res["device"] = dev;
+    res["action"] = "reset_stats";
+    res["queued_ms"] = millis();
+    AsyncResponseStream* response = request->beginResponseStream("application/json");
+    if (response == nullptr) {
+      request->send(503, "text/plain", "Response alloc failed");
+      return;
+    }
+    serializeJson(res, *response);
+    addNoStoreHeaders(response);
+    request->send(response);
+  }, nullptr, [](AsyncWebServerRequest* request, uint8_t* data, size_t len, size_t index, size_t total) {
+    (void)appendRequestBodyChunk(request, data, len, index, total, kDeviceActionBodyMaxBytes);
+  });
+
   _impl->server.on("/api/output/test", HTTP_POST, [this](AsyncWebServerRequest* request) {
     if (_app == nullptr) {
       request->send(503, "text/plain", "App not ready");
