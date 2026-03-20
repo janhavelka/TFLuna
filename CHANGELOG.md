@@ -8,10 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
-- README, changelog, agent guidance, and package metadata were refreshed to match
-  the current S2/S3 firmware surface
-- User-facing docs and key source comments were cleaned up for terminology and
-  text-encoding consistency
+- Top-level docs were rewritten to match the current ESP32-S2/S3 build matrix,
+  default wiring, quick-test/stress startup profiles, and operator-facing
+  firmware surfaces
+- README now documents the current web/API/CLI endpoints, logging format, and
+  bundled vendor reference material under `docs/`
+- CONTRIBUTING and SECURITY guidance now reflect the repository's actual
+  validation gates, architecture invariants, supported versions, and private
+  reporting expectations
 
 ## [1.5.0] - 2026-03-19
 

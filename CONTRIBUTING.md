@@ -1,52 +1,68 @@
 # Contributing
 
-Thank you for considering contributing to this project!
+This project targets production-grade ESP32-S2 and ESP32-S3 firmware. Favor
+predictable behavior, bounded runtime work, and portability over cleverness.
 
-## Quick Start
+## Workflow
 
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/my-feature`
-3. Make your changes
-4. Ensure firmware builds: `pio run -e firmware_esp32s2 -e firmware_esp32s3`
-5. Run logic tests: `pio test -e native`
-6. Commit with a clear message: `git commit -m "feat: add X"`
-7. Push and open a Pull Request
+1. Fork the repository and create a focused branch.
+2. Make the smallest change that fully solves the problem.
+3. Update docs and `CHANGELOG.md` when behavior, defaults, or interfaces move.
+4. Run the local validation suite before opening a PR.
 
-## Guidelines
+## Required Validation
 
-### Code Style
-- Follow existing code style (see `.clang-format`)
-- Use `constexpr` instead of macros for constants
-- Prefer explicit over implicit
-- No heap allocations in steady-state library code
+```bash
+python tools/conformance_gates.py
+python scripts/check_text_integrity.py
+pio test -e native
+pio run -e firmware_esp32s2
+pio run -e firmware_esp32s3
+```
 
-### Commits
-- Use [Conventional Commits](https://www.conventionalcommits.org/) format:
-  - `feat:` new feature
-  - `fix:` bug fix
-  - `docs:` documentation only
-  - `refactor:` code change that neither fixes a bug nor adds a feature
-  - `test:` adding or updating tests
-  - `chore:` maintenance tasks
+If your change affects hardware behavior, include any manual bench validation in
+the PR description.
 
-### Pull Requests
-- Keep PRs focused (one feature/fix per PR)
-- Update documentation if needed
-- Add changelog entry under `[Unreleased]`
-- Ensure CI passes
+## Architecture Expectations
 
-### What We Accept
-- Bug fixes
-- Documentation improvements
-- Performance improvements (with benchmarks)
-- New examples (if they demonstrate a common use case)
+- Preserve the deterministic subsystem lifecycle: `begin()`, `tick()`, `end()`.
+- Keep `TFLunaControl::tick()` cooperative and bounded. Do not add blocking
+  waits or `delay()` calls in library code.
+- Only `src/i2c/I2cTask` may touch the I2C backend directly.
+- Web callbacks must enqueue mutations; read paths should use snapshots.
+- Avoid heap churn in steady-state control paths.
+- `Status.msg` must always point to static strings.
+- Do not add `Serial` logging inside `src/`; use existing telemetry surfaces.
 
-### What We Probably Won't Accept
-- Breaking API changes without discussion
-- Heavy dependencies
-- Platform-specific code in the library core
-- Features that add heap allocations in steady state
+## Tests and Docs
 
-## Questions?
+- Add or extend tests under `tests/test_native` for logic, scheduling, timeout,
+  serialization, or validation changes.
+- Keep `README.md`, `CHANGELOG.md`, and any affected operator/developer docs in
+  sync with the code.
+- Preserve JSON safety rules: no plaintext `ap_pass` on GET responses and no
+  hand-built JSON payloads for string/float-bearing endpoints.
 
-Open a GitHub Discussion or Issue for questions.
+## Commits
+
+Use [Conventional Commits](https://www.conventionalcommits.org/) where practical:
+
+- `feat:` new feature
+- `fix:` bug fix
+- `docs:` documentation-only change
+- `refactor:` internal code change without user-visible behavior change
+- `test:` test-only change
+- `chore:` maintenance
+
+## Pull Requests
+
+- Keep PRs narrow and explain the user-visible impact.
+- Call out target board assumptions, risk areas, and any manual test coverage.
+- Add a changelog entry under `[Unreleased]`.
+- Do not merge changes that break the conformance gates or either firmware
+  target.
+
+## Questions
+
+Open a GitHub issue for bugs or a discussion thread for general design
+questions.

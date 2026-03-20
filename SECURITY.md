@@ -2,33 +2,51 @@
 
 ## Supported Versions
 
-| Version | Supported          |
-| ------- | ------------------ |
-| 0.1.x   | :white_check_mark: |
+| Version | Supported |
+| ------- | --------- |
+| 1.5.x   | Yes       |
+| < 1.5.0 | No        |
 
 ## Reporting a Vulnerability
 
-If you discover a security vulnerability within this firmware, please follow responsible disclosure:
+Do not disclose vulnerabilities in a public GitHub issue.
 
-1. **Do NOT** open a public GitHub issue.
-2. Email the maintainer at: `security@tfluna.local` (replace with actual email).
-3. Include:
-   - A description of the vulnerability
-   - Steps to reproduce
-   - Potential impact
-   - Any suggested fixes (optional)
+Prefer one of these private paths:
 
-We will acknowledge receipt within 48 hours and aim to provide a fix or mitigation within 14 days for critical issues.
+1. Use GitHub's private vulnerability reporting for the repository, if enabled.
+2. If that is not available, contact the maintainer through a private channel
+   linked from the maintainer's GitHub profile before publishing details.
+
+Include:
+
+- affected firmware version or commit
+- target board (`ESP32-S2` or `ESP32-S3`)
+- steps to reproduce
+- impact and expected attacker position
+- logs, captures, or proof-of-concept details as needed
+
+Please keep details private until a fix or mitigation is ready.
 
 ## Scope
 
-This firmware is designed for embedded systems. Security considerations include:
-- No dynamic memory allocation in tick/steady-state paths
-- Local SoftAP web UI (no internet connectivity required)
-- Persistent storage is opt-in via Config (NVS disabled by default)
+Relevant security surfaces in this firmware include:
 
-## Security Best Practices for Users
+- SoftAP HTTP and WebSocket endpoints
+- serial CLI commands and parsing
+- settings persistence and secret handling
+- SD logging and exported diagnostics
+- local bus inputs (UART, I2C, SPI, button/endstop GPIO) treated as untrusted
 
-- Always validate external inputs before passing to `Config`
-- Use hardware watchdogs in production deployments
-- Keep dependencies updated
+Project invariants worth preserving:
+
+- `ap_pass` is write-only on GET endpoints
+- JSON responses are serialized, not hand-formatted
+- non-finite floats are emitted as JSON `null`
+- web callbacks do not mutate hardware state directly
+
+## Deployment Notes
+
+- Change the default SoftAP password before field use.
+- Disable WiFi entirely when a deployment does not need local web access.
+- Leave NVS persistence disabled unless retained settings are required.
+- Keep third-party libraries and PlatformIO platform pins current.
