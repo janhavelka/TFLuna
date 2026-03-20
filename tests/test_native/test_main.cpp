@@ -603,16 +603,37 @@ void test_web_live_device_tab_rerenders_distance_stats() {
 
 void test_web_i2c_settings_are_cli_only() {
   std::string pageSource;
+  std::string webSource;
   TEST_ASSERT_TRUE(loadTextFile("src/web/WebPages.h", pageSource));
+  TEST_ASSERT_TRUE(loadTextFile("src/web/WebServer.cpp", webSource));
   const char* text = pageSource.c_str();
+  const char* webText = webSource.c_str();
 
   TEST_ASSERT_NOT_NULL(strstr(text, "I2C tuning is CLI-only."));
-  TEST_ASSERT_NOT_NULL(strstr(text, "const DM={i2c_bus:[],sd:[],env:[],rtc:[],lidar:["));
+  TEST_ASSERT_NOT_NULL(strstr(text, "const DEVICE_GROUPS=['sd','env','rtc','lidar','co2'];"));
+  TEST_ASSERT_NOT_NULL(strstr(text, "const DM={sd:[],env:[],rtc:[],lidar:["));
   TEST_ASSERT_NOT_NULL(strstr(text, "else if(n==='settings'){Promise.all([getSet(),stOnce()])}"));
   TEST_ASSERT_NOT_NULL(strstr(text, "if(activeTab==='settings'){await getSet();return}"));
+  TEST_ASSERT_NULL(strstr(text, "function i2cBusRows()"));
+  TEST_ASSERT_NULL(strstr(text, "fs('i2c_env_address',cur.i2c_env_address)"));
+  TEST_ASSERT_NOT_NULL(strstr(webText, "I2C settings are CLI-only"));
+  TEST_ASSERT_NOT_NULL(strstr(webText, "hasJsonKeyPrefix(doc.as<JsonObjectConst>(), \"i2c_\")"));
+  TEST_ASSERT_NULL(strstr(webText, "doc.containsKey(\"i2c_freq_hz\")"));
   TEST_ASSERT_NULL(strstr(text, "env-model"));
   TEST_ASSERT_NULL(strstr(text, "queueRtcBackupSetup"));
   TEST_ASSERT_NULL(strstr(text, "rtc-setup-backup"));
+}
+
+void test_web_system_info_hides_unused_sensor_libraries() {
+  std::string pageSource;
+  TEST_ASSERT_TRUE(loadTextFile("src/web/WebPages.h", pageSource));
+  const char* text = pageSource.c_str();
+
+  TEST_ASSERT_NOT_NULL(strstr(text, "Libraries (Active I/O)"));
+  TEST_ASSERT_NOT_NULL(strstr(text, "envLabel"));
+  TEST_ASSERT_NOT_NULL(strstr(text, "ENV Sensor"));
+  TEST_ASSERT_NULL(strstr(text, "EE871"));
+  TEST_ASSERT_NULL(strstr(text, "SSD1315"));
 }
 
 void test_web_endstops_tab_replaces_outputs_surface() {
@@ -655,6 +676,8 @@ void test_serial_summary_runs_before_deferred_work_and_keeps_cadence() {
   TEST_ASSERT_TRUE(deferredPos != std::string::npos);
   TEST_ASSERT_TRUE(summaryPos < deferredPos);
 
+  TEST_ASSERT_NOT_NULL(strstr(text, "sanitizeCliVerbosity(settings.cliVerbosity)"));
+  TEST_ASSERT_NOT_NULL(strstr(text, "if (verbosity == 0U) {"));
   TEST_ASSERT_NOT_NULL(strstr(text, "if (g_nextSerialSummaryMs == 0U) {"));
   TEST_ASSERT_NOT_NULL(strstr(text, "do {"));
   TEST_ASSERT_NOT_NULL(strstr(text, "g_nextSerialSummaryMs += intervalMs;"));
@@ -1665,6 +1688,7 @@ int main(int argc, char** argv) {
   RUN_TEST(test_faster_distance_refresh_defaults);
   RUN_TEST(test_web_live_device_tab_rerenders_distance_stats);
   RUN_TEST(test_web_i2c_settings_are_cli_only);
+  RUN_TEST(test_web_system_info_hides_unused_sensor_libraries);
   RUN_TEST(test_web_endstops_tab_replaces_outputs_surface);
   RUN_TEST(test_web_logging_tuning_is_cli_only);
   RUN_TEST(test_serial_summary_runs_before_deferred_work_and_keeps_cadence);

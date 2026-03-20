@@ -91,9 +91,22 @@ TFLunaControl::HardwareSettings g_hw{};
 TFLunaControl::AppSettings g_appSettings{};
 TFLunaControl::StartupProfileSettings g_startupProfile{};
 
+uint8_t sanitizeCliVerbosity(uint8_t raw) {
+  if (raw < TFLunaControl::RuntimeSettings::MIN_CLI_VERBOSITY ||
+      raw > TFLunaControl::RuntimeSettings::MAX_CLI_VERBOSITY) {
+    return 1U;
+  }
+  return raw;
+}
+
 void printSerialSummary(uint32_t nowMs) {
   TFLunaControl::RuntimeSettings settings{};
   if (!g_app.tryGetSettingsSnapshot(settings)) {
+    return;
+  }
+
+  const uint8_t verbosity = sanitizeCliVerbosity(settings.cliVerbosity);
+  if (verbosity == 0U) {
     return;
   }
 

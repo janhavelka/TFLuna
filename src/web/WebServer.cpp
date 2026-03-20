@@ -122,6 +122,20 @@ bool parseCliVerbosityValue(JsonVariantConst value, uint8_t& out) {
   return true;
 }
 
+bool hasJsonKeyPrefix(JsonObjectConst obj, const char* prefix) {
+  if (prefix == nullptr || prefix[0] == '\0') {
+    return false;
+  }
+  const size_t prefixLen = strlen(prefix);
+  for (JsonPairConst kv : obj) {
+    const char* key = kv.key().c_str();
+    if (key != nullptr && strncmp(key, prefix, prefixLen) == 0) {
+      return true;
+    }
+  }
+  return false;
+}
+
 AsyncWebSocketSharedBuffer makeWsSharedBuffer(const char* payload, size_t len) {
   if (payload == nullptr || len == 0U) {
     return AsyncWebSocketSharedBuffer{};
@@ -1176,6 +1190,10 @@ Status WebServer::setupHandlers() {
     if (doc.containsKey("persist")) {
       persist = doc["persist"].as<bool>();
     }
+    if (hasJsonKeyPrefix(doc.as<JsonObjectConst>(), "i2c_")) {
+      request->send(400, "text/plain", "I2C settings are CLI-only");
+      return;
+    }
 
     if (doc.containsKey("sample_interval_ms")) {
       updated.sampleIntervalMs = doc["sample_interval_ms"].as<uint32_t>();
@@ -1266,140 +1284,6 @@ Status WebServer::setupHandlers() {
         return;
       }
       updated.cliVerbosity = cliVerbosity;
-    }
-    if (doc.containsKey("i2c_freq_hz")) {
-      updated.i2cFreqHz = doc["i2c_freq_hz"].as<uint32_t>();
-    }
-    if (doc.containsKey("i2c_op_timeout_ms")) {
-      updated.i2cOpTimeoutMs = doc["i2c_op_timeout_ms"].as<uint32_t>();
-    }
-    if (doc.containsKey("i2c_stuck_debounce_ms")) {
-      updated.i2cStuckDebounceMs = doc["i2c_stuck_debounce_ms"].as<uint8_t>();
-    }
-    if (doc.containsKey("i2c_max_consecutive_failures")) {
-      updated.i2cMaxConsecutiveFailures = doc["i2c_max_consecutive_failures"].as<uint8_t>();
-    }
-    if (doc.containsKey("i2c_recovery_backoff_ms")) {
-      updated.i2cRecoveryBackoffMs = doc["i2c_recovery_backoff_ms"].as<uint32_t>();
-    }
-    if (doc.containsKey("i2c_recovery_backoff_max_ms")) {
-      updated.i2cRecoveryBackoffMaxMs = doc["i2c_recovery_backoff_max_ms"].as<uint32_t>();
-    }
-    if (doc.containsKey("i2c_requests_per_tick")) {
-      updated.i2cRequestsPerTick = doc["i2c_requests_per_tick"].as<uint8_t>();
-    }
-    if (doc.containsKey("i2c_slow_op_threshold_us")) {
-      updated.i2cSlowOpThresholdUs = doc["i2c_slow_op_threshold_us"].as<uint32_t>();
-    }
-    if (doc.containsKey("i2c_slow_op_degrade_count")) {
-      updated.i2cSlowOpDegradeCount = doc["i2c_slow_op_degrade_count"].as<uint8_t>();
-    }
-    if (doc.containsKey("i2c_task_heartbeat_timeout_ms")) {
-      updated.i2cTaskHeartbeatTimeoutMs = doc["i2c_task_heartbeat_timeout_ms"].as<uint32_t>();
-    }
-    if (doc.containsKey("i2c_env_poll_ms")) {
-      updated.i2cEnvPollMs = doc["i2c_env_poll_ms"].as<uint32_t>();
-    }
-    if (doc.containsKey("i2c_rtc_poll_ms")) {
-      updated.i2cRtcPollMs = doc["i2c_rtc_poll_ms"].as<uint32_t>();
-    }
-    if (doc.containsKey("i2c_display_poll_ms")) {
-      updated.i2cDisplayPollMs = doc["i2c_display_poll_ms"].as<uint32_t>();
-    }
-    if (doc.containsKey("i2c_env_bme_mode")) {
-      updated.i2cEnvBmeMode = doc["i2c_env_bme_mode"].as<uint8_t>();
-    }
-    if (doc.containsKey("i2c_env_bme_osrs_t")) {
-      updated.i2cEnvBmeOsrsT = doc["i2c_env_bme_osrs_t"].as<uint8_t>();
-    }
-    if (doc.containsKey("i2c_env_bme_osrs_p")) {
-      updated.i2cEnvBmeOsrsP = doc["i2c_env_bme_osrs_p"].as<uint8_t>();
-    }
-    if (doc.containsKey("i2c_env_bme_osrs_h")) {
-      updated.i2cEnvBmeOsrsH = doc["i2c_env_bme_osrs_h"].as<uint8_t>();
-    }
-    if (doc.containsKey("i2c_env_bme_filter")) {
-      updated.i2cEnvBmeFilter = doc["i2c_env_bme_filter"].as<uint8_t>();
-    }
-    if (doc.containsKey("i2c_env_bme_standby")) {
-      updated.i2cEnvBmeStandby = doc["i2c_env_bme_standby"].as<uint8_t>();
-    }
-    if (doc.containsKey("i2c_env_sht_mode")) {
-      updated.i2cEnvShtMode = doc["i2c_env_sht_mode"].as<uint8_t>();
-    }
-    if (doc.containsKey("i2c_env_sht_repeatability")) {
-      updated.i2cEnvShtRepeatability = doc["i2c_env_sht_repeatability"].as<uint8_t>();
-    }
-    if (doc.containsKey("i2c_env_sht_periodic_rate")) {
-      updated.i2cEnvShtPeriodicRate = doc["i2c_env_sht_periodic_rate"].as<uint8_t>();
-    }
-    if (doc.containsKey("i2c_env_sht_clock_stretching")) {
-      updated.i2cEnvShtClockStretching = doc["i2c_env_sht_clock_stretching"].as<uint8_t>();
-    }
-    if (doc.containsKey("i2c_env_sht_low_vdd")) {
-      updated.i2cEnvShtLowVdd = doc["i2c_env_sht_low_vdd"].as<bool>();
-    }
-    if (doc.containsKey("i2c_env_sht_command_delay_ms")) {
-      updated.i2cEnvShtCommandDelayMs = doc["i2c_env_sht_command_delay_ms"].as<uint16_t>();
-    }
-    if (doc.containsKey("i2c_env_sht_not_ready_timeout_ms")) {
-      updated.i2cEnvShtNotReadyTimeoutMs = doc["i2c_env_sht_not_ready_timeout_ms"].as<uint32_t>();
-    }
-    if (doc.containsKey("i2c_env_sht_periodic_fetch_margin_ms")) {
-      updated.i2cEnvShtPeriodicFetchMarginMs =
-          doc["i2c_env_sht_periodic_fetch_margin_ms"].as<uint32_t>();
-    }
-    if (doc.containsKey("i2c_env_sht_allow_general_call_reset")) {
-      updated.i2cEnvShtAllowGeneralCallReset =
-          doc["i2c_env_sht_allow_general_call_reset"].as<bool>();
-    }
-    if (doc.containsKey("i2c_env_sht_recover_use_bus_reset")) {
-      updated.i2cEnvShtRecoverUseBusReset =
-          doc["i2c_env_sht_recover_use_bus_reset"].as<bool>();
-    }
-    if (doc.containsKey("i2c_env_sht_recover_use_soft_reset")) {
-      updated.i2cEnvShtRecoverUseSoftReset =
-          doc["i2c_env_sht_recover_use_soft_reset"].as<bool>();
-    }
-    if (doc.containsKey("i2c_env_sht_recover_use_hard_reset")) {
-      updated.i2cEnvShtRecoverUseHardReset =
-          doc["i2c_env_sht_recover_use_hard_reset"].as<bool>();
-    }
-    if (doc.containsKey("i2c_recover_timeout_ms")) {
-      updated.i2cRecoverTimeoutMs = doc["i2c_recover_timeout_ms"].as<uint32_t>();
-    }
-    if (doc.containsKey("i2c_max_results_per_tick")) {
-      updated.i2cMaxResultsPerTick = doc["i2c_max_results_per_tick"].as<uint8_t>();
-    }
-    if (doc.containsKey("i2c_task_wait_ms")) {
-      updated.i2cTaskWaitMs = doc["i2c_task_wait_ms"].as<uint32_t>();
-    }
-    if (doc.containsKey("i2c_health_stale_task_multiplier")) {
-      updated.i2cHealthStaleTaskMultiplier = doc["i2c_health_stale_task_multiplier"].as<uint8_t>();
-    }
-    if (doc.containsKey("i2c_slow_window_ms")) {
-      updated.i2cSlowWindowMs = doc["i2c_slow_window_ms"].as<uint32_t>();
-    }
-    if (doc.containsKey("i2c_health_recent_window_ms")) {
-      updated.i2cHealthRecentWindowMs = doc["i2c_health_recent_window_ms"].as<uint32_t>();
-    }
-    if (doc.containsKey("i2c_env_address")) {
-      updated.i2cEnvAddress = doc["i2c_env_address"].as<uint8_t>();
-    }
-    if (doc.containsKey("i2c_rtc_backup_mode")) {
-      updated.i2cRtcBackupMode = doc["i2c_rtc_backup_mode"].as<uint8_t>();
-    }
-    if (doc.containsKey("i2c_rtc_enable_eeprom_writes")) {
-      updated.i2cRtcEnableEepromWrites = doc["i2c_rtc_enable_eeprom_writes"].as<bool>();
-    }
-    if (doc.containsKey("i2c_rtc_eeprom_timeout_ms")) {
-      updated.i2cRtcEepromTimeoutMs = doc["i2c_rtc_eeprom_timeout_ms"].as<uint32_t>();
-    }
-    if (doc.containsKey("i2c_rtc_offline_threshold")) {
-      updated.i2cRtcOfflineThreshold = doc["i2c_rtc_offline_threshold"].as<uint8_t>();
-    }
-    if (doc.containsKey("i2c_display_address")) {
-      updated.i2cDisplayAddress = doc["i2c_display_address"].as<uint8_t>();
     }
     if (doc.containsKey("e2_address")) {
       updated.e2Address = doc["e2_address"].as<uint8_t>();
