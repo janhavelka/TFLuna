@@ -426,7 +426,7 @@ void test_settings_json_write_only_password() {
   TEST_ASSERT_NOT_NULL(strstr(out, "\"ap_pass_masked\":"));
   TEST_ASSERT_NOT_NULL(strstr(out, "\"ap_pass_update_mode\":\"write_only\""));
   TEST_ASSERT_NOT_NULL(strstr(out, "\"cli_verbosity_name\":\"normal\""));
-  TEST_ASSERT_NOT_NULL(strstr(out, "\"log_session_name\":\"run\""));
+  TEST_ASSERT_NOT_NULL(strstr(out, "\"log_session_name\":\"tfluna\""));
   TEST_ASSERT_NOT_NULL(strstr(out, "\"e2_address\":"));
   TEST_ASSERT_NOT_NULL(strstr(out, "\"e2_recovery_backoff_ms\":"));
 }
@@ -1022,6 +1022,7 @@ void test_env_oneshot_nonblocking() {
 
   RuntimeSettings s;
   s.restoreDefaults();
+  s.i2cEnvAddress = 0x44;
   s.i2cRequestsPerTick = 2;
   s.i2cEnvPollMs = 10;
   s.i2cEnvConversionWaitMs = 20;
