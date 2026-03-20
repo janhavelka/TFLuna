@@ -3479,8 +3479,8 @@ void SerialCli::applyPreset(const char* domain, const char* preset, bool persist
   queueSettingsUpdate(settings, persist);
 }
 
-void SerialCli::queueSettingsUpdate(const RuntimeSettings& s, bool persist) {
-  const Status st = _app.enqueueApplySettings(s, persist);
+void SerialCli::queueSettingsUpdate(const RuntimeSettings& s, bool persist, const char* changeHint) {
+  const Status st = _app.enqueueApplySettings(s, persist, changeHint);
   if (!st.ok()) {
     Serial.printf("ERR settings queue failed: %s (%s)\n", errToStr(st.code), st.msg);
     return;
@@ -3573,6 +3573,20 @@ void SerialCli::executeLine(char* line, uint32_t nowMs) {
     }
   };
 
+  auto queueSettingsUpdateIfChanged = [&](const RuntimeSettings& before,
+                                          const RuntimeSettings& after,
+                                          bool persist,
+                                          const char* changeHint) -> bool {
+    // Both structs originate from the same snapshot copy in this CLI path,
+    // so a bytewise comparison is sufficient to suppress no-op updates.
+    if (memcmp(&before, &after, sizeof(RuntimeSettings)) == 0) {
+      printOkf("settings unchanged");
+      return true;
+    }
+    queueSettingsUpdate(after, persist, changeHint);
+    return true;
+  };
+
   auto queueGroupedSetting = [&](const char* group, const char* key, const char* value, bool persist) -> bool {
     char keyBuffer[48] = {};
     const char* resolvedKey = nullptr;
@@ -3587,6 +3601,7 @@ void SerialCli::executeLine(char* line, uint32_t nowMs) {
       Serial.println("ERR state busy");
       return false;
     }
+    const RuntimeSettings before = settings;
 
     if (!applySettingByKey(settings, resolvedKey, value, errorMsg)) {
       Serial.printf("ERR set failed: %s\n", errorMsg);
@@ -3599,8 +3614,7 @@ void SerialCli::executeLine(char* line, uint32_t nowMs) {
       return false;
     }
 
-    queueSettingsUpdate(settings, persist);
-    return true;
+    return queueSettingsUpdateIfChanged(before, settings, persist, resolvedKey);
   };
 
   auto loadSettingsSnapshot = [&](RuntimeSettings& out) -> bool {
@@ -4049,6 +4063,7 @@ void SerialCli::executeLine(char* line, uint32_t nowMs) {
       Serial.println("ERR state busy");
       return;
     }
+    const RuntimeSettings before = settings;
 
     if (!applySettingByKey(settings, key, value, errorMsg)) {
       Serial.printf("ERR set failed: %s\n", errorMsg);
@@ -4061,7 +4076,7 @@ void SerialCli::executeLine(char* line, uint32_t nowMs) {
       return;
     }
 
-    queueSettingsUpdate(settings, persist);
+    (void)queueSettingsUpdateIfChanged(before, settings, persist, key);
     return;
   }
 
@@ -4313,6 +4328,7 @@ void SerialCli::executeLine(char* line, uint32_t nowMs) {
         Serial.println("ERR state busy");
         return;
       }
+      const RuntimeSettings before = settings;
       const char* errorMsg = "";
       if (!applySettingByKey(settings, "i2c_env_bme_osrs_t", tokens[3], errorMsg) ||
           !applySettingByKey(settings, "i2c_env_bme_osrs_p", tokens[4], errorMsg) ||
@@ -4325,7 +4341,7 @@ void SerialCli::executeLine(char* line, uint32_t nowMs) {
         Serial.printf("ERR settings invalid: %s (%s)\n", errToStr(validation.code), validation.msg);
         return;
       }
-      queueSettingsUpdate(settings, persist);
+      (void)queueSettingsUpdateIfChanged(before, settings, persist, "i2c_env_bme_osrs");
       return;
     }
     if (argc == 3 && strcmp(tokens[1], "bme") == 0 && strcmp(tokens[2], "osrs") == 0) {
@@ -5354,6 +5370,7 @@ void SerialCli::executeLine(char* line, uint32_t nowMs) {
         Serial.println("ERR state busy");
         return;
       }
+      const RuntimeSettings before = settings;
       const char* errorMsg = "";
       if (!applySettingByKey(settings, "i2c_recovery_backoff_ms", tokens[2], errorMsg) ||
           !applySettingByKey(settings, "i2c_recovery_backoff_max_ms", tokens[3], errorMsg)) {
@@ -5365,7 +5382,7 @@ void SerialCli::executeLine(char* line, uint32_t nowMs) {
         Serial.printf("ERR settings invalid: %s (%s)\n", errToStr(validation.code), validation.msg);
         return;
       }
-      queueSettingsUpdate(settings, persist);
+      (void)queueSettingsUpdateIfChanged(before, settings, persist, "i2c_recovery_backoff");
       return;
     }
     if ((argc == 3 || argc == 4) && strcmp(tokens[1], "requests") == 0) {

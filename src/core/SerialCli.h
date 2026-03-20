@@ -37,7 +37,9 @@ class SerialCli {
   bool loadDeviceStatuses(size_t& outCount);
   const DeviceStatus* findDeviceInScratch(const char* name, size_t count) const;
   uint8_t currentVerbosity() const;
-  void queueSettingsUpdate(const RuntimeSettings& settings, bool persist);
+  void queueSettingsUpdate(const RuntimeSettings& settings,
+                           bool persist,
+                           const char* changeHint = nullptr);
   void executeLine(char* line, uint32_t nowMs);
 
   static constexpr size_t LINE_BYTES = HardwareSettings::CLI_LINE_BYTES;

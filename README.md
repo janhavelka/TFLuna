@@ -72,7 +72,6 @@ The native test environment requires a host `gcc/g++` toolchain.
 Sample CSV rows include:
 
 - `timestamp`
-- `time_source`
 - `uptime_ms`
 - `sample_index`
 - `distance_cm`
@@ -86,3 +85,5 @@ Sample CSV rows include:
 - If the RV3032 RTC is readable and valid, logs use RTC wall-clock timestamps.
 - If RTC time is invalid or unavailable, the firmware falls back to uptime-based
   timestamps and exposes that fallback on serial, web, OLED, and CSV rows.
+- In CSV logs, `timestamp` contains either the RTC wall-clock string or the
+  literal `uptime`; `uptime_ms` remains available as the monotonic time base.

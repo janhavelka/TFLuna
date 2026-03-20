@@ -450,6 +450,17 @@ void test_cli_verbosity_uses_named_levels() {
   TEST_ASSERT_NOT_NULL(strstr(webSource.c_str(), "strcmp(token, \"off\") == 0"));
 }
 
+void test_cli_settings_updates_use_change_hints_and_skip_noops() {
+  std::string cliSource;
+  TEST_ASSERT_TRUE(loadTextFile("src/core/SerialCli.cpp", cliSource));
+  const char* text = cliSource.c_str();
+
+  TEST_ASSERT_NOT_NULL(strstr(text, "const Status st = _app.enqueueApplySettings(s, persist, changeHint);"));
+  TEST_ASSERT_NOT_NULL(strstr(text, "printOkf(\"settings unchanged\")"));
+  TEST_ASSERT_NOT_NULL(strstr(text, "queueSettingsUpdateIfChanged(before, settings, persist, resolvedKey)"));
+  TEST_ASSERT_NOT_NULL(strstr(text, "queueSettingsUpdateIfChanged(before, settings, persist, key)"));
+}
+
 void test_led_health_debounce_logic() {
   StatusLedAdapter::HealthDebounceState state{};
 
@@ -471,6 +482,19 @@ void test_log_flush_due_logic() {
   TEST_ASSERT_TRUE(SdLogger::shouldAttemptFlush(1000, 0, 2000));
   TEST_ASSERT_FALSE(SdLogger::shouldAttemptFlush(1500, 1000, 1000));
   TEST_ASSERT_TRUE(SdLogger::shouldAttemptFlush(2000, 1000, 1000));
+}
+
+void test_logged_sample_csv_omits_redundant_time_fields() {
+  std::string source;
+  TEST_ASSERT_TRUE(loadTextFile("src/logging/SdLogger.cpp", source));
+  const char* text = source.c_str();
+
+  TEST_ASSERT_NOT_NULL(strstr(text, "\"timestamp,uptime_ms,sample_index,distance_cm,strength,temperature_c,valid_frame,signal_ok,env_temp_c,env_rh_pct,env_pressure_hpa\\n\""));
+  TEST_ASSERT_NULL(strstr(text, "timestamp,timestamp_ms,time_source"));
+  TEST_ASSERT_NULL(strstr(text, "formatSampleTimestampMs("));
+  TEST_ASSERT_NOT_NULL(strstr(text, "static constexpr char SESSION_DATA_PREFIX[] = \"data_\";"));
+  TEST_ASSERT_NOT_NULL(strstr(text, "static constexpr char SESSION_DATA_PREFIX_COMPAT[] = \"data_v2_\";"));
+  TEST_ASSERT_NOT_NULL(strstr(text, "%s/%s_v2.csv"));
 }
 
 void test_lidar_stats_reset_clears_running_window() {
@@ -609,6 +633,32 @@ void test_web_endstops_tab_replaces_outputs_surface() {
   TEST_ASSERT_NULL(strstr(text, "postOutputTestWithRetry"));
   TEST_ASSERT_NULL(strstr(text, "OUTPUT_TEST_RUNNING"));
   TEST_ASSERT_NULL(strstr(text, "out-fan-range"));
+}
+
+void test_web_logging_tuning_is_cli_only() {
+  std::string pageSource;
+  TEST_ASSERT_TRUE(loadTextFile("src/web/WebPages.h", pageSource));
+  const char* text = pageSource.c_str();
+
+  TEST_ASSERT_NOT_NULL(strstr(text, "const LOGGING_BASIC_KEYS=['sample_interval_ms','log_daily_enabled','log_all_enabled','log_flush_ms','log_session_name','log_all_max_bytes','log_events_max_bytes'];"));
+  TEST_ASSERT_NULL(strstr(text, "'log_io_budget_ms','log_mount_retry_ms','log_write_retry_backoff_ms','log_max_write_retries'"));
+}
+
+void test_serial_summary_runs_before_deferred_work_and_keeps_cadence() {
+  std::string mainSource;
+  TEST_ASSERT_TRUE(loadTextFile("src/main.cpp", mainSource));
+  const char* text = mainSource.c_str();
+
+  const size_t summaryPos = mainSource.find("printSerialSummary(nowMs);");
+  const size_t deferredPos = mainSource.find("g_app.processDeferred();");
+  TEST_ASSERT_TRUE(summaryPos != std::string::npos);
+  TEST_ASSERT_TRUE(deferredPos != std::string::npos);
+  TEST_ASSERT_TRUE(summaryPos < deferredPos);
+
+  TEST_ASSERT_NOT_NULL(strstr(text, "if (g_nextSerialSummaryMs == 0U) {"));
+  TEST_ASSERT_NOT_NULL(strstr(text, "do {"));
+  TEST_ASSERT_NOT_NULL(strstr(text, "g_nextSerialSummaryMs += intervalMs;"));
+  TEST_ASSERT_NOT_NULL(strstr(text, "} while (static_cast<int32_t>(nowMs - g_nextSerialSummaryMs) >= 0);"));
 }
 
 void test_no_unbounded_state_mutex_waits() {
@@ -1602,8 +1652,10 @@ int main(int argc, char** argv) {
   RUN_TEST(test_graph_sample_json_nan_outputs_null);
   RUN_TEST(test_settings_json_write_only_password);
   RUN_TEST(test_cli_verbosity_uses_named_levels);
+  RUN_TEST(test_cli_settings_updates_use_change_hints_and_skip_noops);
   RUN_TEST(test_led_health_debounce_logic);
   RUN_TEST(test_log_flush_due_logic);
+  RUN_TEST(test_logged_sample_csv_omits_redundant_time_fields);
   RUN_TEST(test_lidar_stats_reset_clears_running_window);
   RUN_TEST(test_web_server_lifecycle_reinit_safe);
   RUN_TEST(test_web_request_count_clamps);
@@ -1613,6 +1665,8 @@ int main(int argc, char** argv) {
   RUN_TEST(test_web_live_device_tab_rerenders_distance_stats);
   RUN_TEST(test_web_i2c_settings_are_cli_only);
   RUN_TEST(test_web_endstops_tab_replaces_outputs_surface);
+  RUN_TEST(test_web_logging_tuning_is_cli_only);
+  RUN_TEST(test_serial_summary_runs_before_deferred_work_and_keeps_cadence);
   RUN_TEST(test_no_unbounded_state_mutex_waits);
   RUN_TEST(test_nothrow_allocation_paths_for_runtime_objects);
   RUN_TEST(test_i2c_token_wrap_guards_present);

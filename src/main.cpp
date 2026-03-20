@@ -99,11 +99,15 @@ void printSerialSummary(uint32_t nowMs) {
 
   const uint32_t intervalMs =
       (settings.serialPrintIntervalMs == 0U) ? 5000U : settings.serialPrintIntervalMs;
-  if (g_nextSerialSummaryMs != 0U &&
-      static_cast<int32_t>(nowMs - g_nextSerialSummaryMs) < 0) {
+  if (g_nextSerialSummaryMs == 0U) {
+    g_nextSerialSummaryMs = nowMs;
+  }
+  if (static_cast<int32_t>(nowMs - g_nextSerialSummaryMs) < 0) {
     return;
   }
-  g_nextSerialSummaryMs = nowMs + intervalMs;
+  do {
+    g_nextSerialSummaryMs += intervalMs;
+  } while (static_cast<int32_t>(nowMs - g_nextSerialSummaryMs) >= 0);
 
   TFLunaControl::SystemStatus sys{};
   TFLunaControl::Sample latest{};
@@ -211,12 +215,15 @@ void setup() {
 void loop() {
   const uint32_t nowMs = TFLunaControl::SystemClock::nowMs();
   g_app.tick(nowMs);
-  g_app.processDeferred();
   tickStressMode(g_app, g_startupProfile, nowMs);
   if (g_serialCliEnabled) {
     g_cli.tick(nowMs);
     printSerialSummary(nowMs);
   }
+  // Deferred SD / WiFi / web work can block for hundreds of milliseconds.
+  // Keep CLI input and periodic serial diagnostics ahead of that work so the
+  // terminal output stays responsive when logging toggles trigger SD setup.
+  g_app.processDeferred();
   // Yield each iteration so IDLE tasks can run on dual-core targets.
   delay(1);
 }

@@ -19,8 +19,10 @@ static constexpr char DAILY_DIR[] = "/logs/daily";
 static constexpr uint32_t SD_FAST_MOUNT_RETRY_MS = 1000UL;
 static constexpr char RUNS_DIR[] = "/logs/runs";
 static constexpr char UNKNOWN_DAY[] = "unknown";
+static constexpr char SESSION_DATA_PREFIX[] = "data_";
+static constexpr char SESSION_DATA_PREFIX_COMPAT[] = "data_v2_";
 static constexpr char CSV_HEADER[] =
-    "timestamp,timestamp_ms,time_source,uptime_ms,sample_index,distance_cm,strength,temperature_c,valid_frame,signal_ok,env_temp_c,env_rh_pct,env_pressure_hpa\n";
+    "timestamp,uptime_ms,sample_index,distance_cm,strength,temperature_c,valid_frame,signal_ok,env_temp_c,env_rh_pct,env_pressure_hpa\n";
 static constexpr char EVENTS_HEADER[] = "ts_unix,ts_local,event_code,event_msg\n";
 // --- FAT32-safe info timing ---
 // freeClusterCount() scans the entire FAT table and can block the
@@ -39,23 +41,6 @@ static constexpr uint8_t SESSION_STAGE_IDLE = 0U;
 static constexpr uint8_t SESSION_STAGE_WAIT_RUNS_DIR = 1U;
 static constexpr uint8_t SESSION_STAGE_WAIT_SESSION_DIR = 2U;
 
-static void formatSampleTimestampMs(const Sample& sample, char* out, size_t outLen) {
-  if (out == nullptr || outLen == 0U) {
-    return;
-  }
-  out[0] = '\0';
-
-  if (sample.tsLocal[0] != '\0') {
-    snprintf(out,
-             outLen,
-             "%s.%03lu",
-             sample.tsLocal,
-             static_cast<unsigned long>(sample.uptimeMs % 1000UL));
-    return;
-  }
-
-  snprintf(out, outLen, "uptime+%lums", static_cast<unsigned long>(sample.uptimeMs));
-}
 static constexpr uint8_t SESSION_STAGE_WAIT_RESUME_LIST = 3U;
 static constexpr uint8_t SESSION_STAGE_WAIT_RESUME_STAT_DATA = 4U;
 static constexpr uint8_t SESSION_STAGE_WAIT_RESUME_STAT_EVENTS = 5U;
@@ -126,6 +111,14 @@ static bool parsePartFromFileName(const char* name, const char* prefix, uint16_t
   }
   outPart = part;
   return true;
+}
+
+static bool buildDailySampleFilePath(const char* dayKey, char* outPath, size_t outLen) {
+  if (dayKey == nullptr || outPath == nullptr || outLen == 0U) {
+    return false;
+  }
+  const int n = snprintf(outPath, outLen, "%s/%s_v2.csv", DAILY_DIR, dayKey);
+  return n > 0 && static_cast<size_t>(n) < outLen;
 }
 
 static bool isAsciiAlphaNum(char c) {
@@ -223,7 +216,12 @@ bool SdLogger::buildSessionAllFilePath(uint16_t part, char* outPath, size_t outL
   if (outPath == nullptr || outLen == 0 || _allSessionDirPath[0] == '\0') {
     return false;
   }
-  const int n = snprintf(outPath, outLen, "%s/data_%04u.csv", _allSessionDirPath, static_cast<unsigned int>(part));
+  const int n = snprintf(outPath,
+                         outLen,
+                         "%s/%s%04u.csv",
+                         _allSessionDirPath,
+                         SESSION_DATA_PREFIX,
+                         static_cast<unsigned int>(part));
   return n > 0 && static_cast<size_t>(n) < outLen;
 }
 
@@ -1853,7 +1851,8 @@ void SdLogger::handleAsyncResult(const AsyncSD::RequestResult& result, uint32_t 
           continue;
         }
         uint16_t parsedPart = 0U;
-        if (parsePartFromFileName(entry.name, "data_", parsedPart)) {
+        if (parsePartFromFileName(entry.name, SESSION_DATA_PREFIX, parsedPart) ||
+            parsePartFromFileName(entry.name, SESSION_DATA_PREFIX_COMPAT, parsedPart)) {
           if (parsedPart > maxDataPart) {
             maxDataPart = parsedPart;
           }
@@ -2220,15 +2219,10 @@ Status SdLogger::logSample(const Sample& sample, uint32_t nowMs) {
   strncpy(rec.dayKey, dayKey, sizeof(rec.dayKey) - 1);
   rec.dayKey[sizeof(rec.dayKey) - 1] = '\0';
 
-  char timestampMs[32] = {0};
-  formatSampleTimestampMs(sample, timestampMs, sizeof(timestampMs));
-
   const int written = snprintf(rec.line,
                                sizeof(rec.line),
-                               "%s,%s,%s,%lu,%lu,%u,%u,%.2f,%u,%u,%.2f,%.2f,%.2f\n",
+                               "%s,%lu,%lu,%u,%u,%.2f,%u,%u,%.2f,%.2f,%.2f\n",
                                (sample.tsLocal[0] != '\0') ? sample.tsLocal : "uptime",
-                               timestampMs,
-                               (sample.tsLocal[0] != '\0') ? "rtc" : "uptime",
                                static_cast<unsigned long>(sample.uptimeMs),
                                static_cast<unsigned long>(sample.sampleIndex),
                                static_cast<unsigned int>(sample.distanceCm),
@@ -2507,8 +2501,7 @@ void SdLogger::tick(uint32_t nowMs) {
             batchCount = static_cast<uint8_t>(batchCount + 1U);
           }
           char dailyPath[HardwareSettings::SD_PATH_BYTES];
-          const int dailyPathLen = snprintf(dailyPath, sizeof(dailyPath), "%s/%s.csv", DAILY_DIR, rec.dayKey);
-          if (dailyPathLen <= 0 || static_cast<size_t>(dailyPathLen) >= sizeof(dailyPath)) {
+          if (!buildDailySampleFilePath(rec.dayKey, dailyPath, sizeof(dailyPath))) {
             setLastError(Status(Err::INVALID_CONFIG, 0, "daily file path overflow"), nowMs);
             _dailyOk = false;
             finalizeTick();
